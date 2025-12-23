@@ -21,12 +21,12 @@ const Header = () => {
       <div className="bg-primary text-primary-foreground">
         <div className="container flex items-center justify-between py-2 text-sm">
           <div className="flex items-center gap-4">
-            <a href="tel:+919999999999" className="flex items-center gap-1 hover:text-accent transition-colors">
+            <a href="tel:+918103282074" className="flex items-center gap-1 hover:text-accent transition-colors">
               <Phone className="w-3 h-3" />
-              <span className="hidden sm:inline">+91 99999 99999</span>
+              <span className="hidden sm:inline">+91 81032 82074</span>
             </a>
             <span className="hidden md:inline text-primary-foreground/80">|</span>
-            <span className="hidden md:inline text-primary-foreground/80">श्री नन्देश्वर शिल्चा एवं जनसेवा संस्थान</span>
+            <span className="hidden md:inline text-primary-foreground/80">श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान</span>
           </div>
           <div className="flex items-center gap-3">
             <a href="#" className="hover:text-accent transition-colors"><Facebook className="w-4 h-4" /></a>
