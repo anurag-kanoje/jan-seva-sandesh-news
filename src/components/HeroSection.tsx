@@ -23,7 +23,7 @@ const HeroSection = () => {
             जनसेवा संदेश: स्थानीय से वैश्विक स्तर तक सच्चाई की आवाज़
           </h1>
           <p className="text-white/90 text-lg md:text-xl mb-6 font-body leading-relaxed">
-            श्री नन्देश्वर शिल्चा एवं जनसेवा संस्थान के साथ मिलकर, हम समाज सेवा और निष्पक्ष पत्रकारिता के लिए प्रतिबद्ध हैं।
+            श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान के साथ मिलकर, हम समाज सेवा और निष्पक्ष पत्रकारिता के लिए प्रतिबद्ध हैं।
           </p>
           <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
             <span className="flex items-center gap-1">

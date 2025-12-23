@@ -37,7 +37,7 @@ const NGOSection = () => {
             हमारी संस्था
           </span>
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4 font-hindi">
-            श्री नन्देश्वर शिल्चा एवं जनसेवा संस्थान
+            श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान
           </h2>
           <p className="text-muted-foreground font-body">
             समाज सेवा और गौ सेवा के प्रति समर्पित, हम निस्वार्थ भाव से जरूरतमंदों की सहायता करते हैं।

@@ -63,19 +63,19 @@ const Footer = () => {
               <li className="flex items-start gap-3 text-sm">
                 <MapPin className="w-4 h-4 mt-1 shrink-0 text-accent" />
                 <span className="text-primary-foreground/70 font-hindi">
-                  श्री नन्देश्वर शिल्चा एवं जनसेवा संस्थान, मुख्य कार्यालय
+                  श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान, मुख्य कार्यालय
                 </span>
               </li>
               <li className="flex items-center gap-3 text-sm">
                 <Phone className="w-4 h-4 shrink-0 text-accent" />
-                <a href="tel:+919999999999" className="text-primary-foreground/70 hover:text-accent transition-colors">
-                  +91 99999 99999
+                <a href="tel:+918103282074" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  +91 81032 82074
                 </a>
               </li>
               <li className="flex items-center gap-3 text-sm">
                 <Mail className="w-4 h-4 shrink-0 text-accent" />
-                <a href="mailto:info@jss.news" className="text-primary-foreground/70 hover:text-accent transition-colors">
-                  info@jss.news
+                <a href="mailto:shreenandeshwar4@gmail.com" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  shreenandeshwar4@gmail.com
                 </a>
               </li>
             </ul>
