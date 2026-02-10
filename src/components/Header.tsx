@@ -1,19 +1,22 @@
 import { useState } from "react";
-import { Menu, X, Search, Facebook, Twitter, Youtube, Instagram, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, X, Search, Facebook, Twitter, Youtube, Instagram, Phone, LogIn, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/logo.jpg";
 
 const navItems = [
-  { name: "होम", href: "#" },
-  { name: "स्थानीय", href: "#local" },
-  { name: "राष्ट्रीय", href: "#national" },
-  { name: "अंतर्राष्ट्रीय", href: "#international" },
-  { name: "NGO गतिविधियां", href: "#ngo" },
-  { name: "संपर्क", href: "#contact" },
+  { name: "होम", href: "/" },
+  { name: "स्थानीय", href: "/#local" },
+  { name: "राष्ट्रीय", href: "/#national" },
+  { name: "अंतर्राष्ट्रीय", href: "/#international" },
+  { name: "NGO गतिविधियां", href: "/#ngo" },
+  { name: "संपर्क", href: "/#contact" },
 ];
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, role, signOut } = useAuth();
 
   return (
     <header className="sticky top-0 z-50">
@@ -40,10 +43,9 @@ const Header = () => {
       {/* Main header */}
       <div className="bg-card shadow-md border-b border-border">
         <div className="container flex items-center justify-between py-3">
-          {/* Logo */}
-          <a href="#" className="flex items-center">
+          <Link to="/" className="flex items-center">
             <img src={logo} alt="JSS - Jan Seva Sandesh" className="h-14 md:h-16 object-contain" />
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-6">
@@ -54,11 +56,29 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Search & Mobile Menu */}
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-foreground">
-              <Search className="w-5 h-5" />
-            </Button>
+          {/* Auth & Mobile Menu */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <>
+                {(role === "admin" || role === "writer") && (
+                  <Link to="/dashboard">
+                    <Button variant="outline" size="sm" className="hidden sm:flex gap-1">
+                      <LayoutDashboard className="w-4 h-4" /> डैशबोर्ड
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="ghost" size="sm" onClick={signOut} className="gap-1">
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">लॉगआउट</span>
+                </Button>
+              </>
+            ) : (
+              <Link to="/login">
+                <Button variant="outline" size="sm" className="gap-1">
+                  <LogIn className="w-4 h-4" /> लॉगिन
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -84,6 +104,11 @@ const Header = () => {
                   {item.name}
                 </a>
               ))}
+              {user && (role === "admin" || role === "writer") && (
+                <Link to="/dashboard" className="py-2 px-4 text-foreground hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  डैशबोर्ड
+                </Link>
+              )}
             </div>
           </nav>
         )}
