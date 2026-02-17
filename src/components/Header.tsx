@@ -1,22 +1,33 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Search, Facebook, Twitter, Youtube, Instagram, Phone, LogIn, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/logo.jpg";
 
 const navItems = [
   { name: "होम", href: "/" },
-  { name: "स्थानीय", href: "/#local" },
-  { name: "राष्ट्रीय", href: "/#national" },
-  { name: "अंतर्राष्ट्रीय", href: "/#international" },
+  { name: "खोजें", href: "/search" },
   { name: "NGO गतिविधियां", href: "/#ngo" },
   { name: "संपर्क", href: "/#contact" },
 ];
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user, role, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery("");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50">
@@ -49,15 +60,22 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-6">
-            {navItems.map((item) => (
-              <a key={item.name} href={item.href} className="nav-link text-foreground font-hindi">
-                {item.name}
-              </a>
-            ))}
+            {navItems.map((item) =>
+              item.href.startsWith("/#") ? (
+                <a key={item.name} href={item.href} className="nav-link text-foreground font-hindi">{item.name}</a>
+              ) : (
+                <Link key={item.name} to={item.href} className="nav-link text-foreground font-hindi">{item.name}</Link>
+              )
+            )}
           </nav>
 
-          {/* Auth & Mobile Menu */}
+          {/* Auth, Search & Mobile */}
           <div className="flex items-center gap-2">
+            {/* Search toggle */}
+            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(!searchOpen)}>
+              <Search className="w-4 h-4" />
+            </Button>
+
             {user ? (
               <>
                 {(role === "admin" || role === "writer") && (
@@ -79,31 +97,37 @@ const Header = () => {
                 </Button>
               </Link>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-foreground"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
+            <Button variant="ghost" size="icon" className="lg:hidden text-foreground" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
           </div>
         </div>
 
+        {/* Search bar */}
+        {searchOpen && (
+          <div className="border-t border-border py-3 bg-card animate-fade-in-up">
+            <form onSubmit={handleSearch} className="container flex gap-2 max-w-xl mx-auto">
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="समाचार खोजें..." autoFocus className="flex-1" />
+              <Button type="submit" size="sm"><Search className="w-4 h-4" /></Button>
+            </form>
+          </div>
+        )}
+
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <nav className="lg:hidden bg-card border-t border-border py-4 animate-fade-in-up">
             <div className="container flex flex-col gap-3">
-              {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="py-2 px-4 text-foreground hover:bg-muted hover:text-accent rounded-md transition-colors font-hindi"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
+              {navItems.map((item) =>
+                item.href.startsWith("/#") ? (
+                  <a key={item.name} href={item.href} className="py-2 px-4 text-foreground hover:bg-muted hover:text-accent rounded-md transition-colors font-hindi" onClick={() => setIsMenuOpen(false)}>
+                    {item.name}
+                  </a>
+                ) : (
+                  <Link key={item.name} to={item.href} className="py-2 px-4 text-foreground hover:bg-muted hover:text-accent rounded-md transition-colors font-hindi" onClick={() => setIsMenuOpen(false)}>
+                    {item.name}
+                  </Link>
+                )
+              )}
               {user && (role === "admin" || role === "writer") && (
                 <Link to="/dashboard" className="py-2 px-4 text-foreground hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
                   डैशबोर्ड
@@ -125,7 +149,6 @@ const Header = () => {
               <span className="mx-8">🔴 श्री नन्देश्वर संस्थान द्वारा गौशाला में 100 गायों की सेवा जारी</span>
               <span className="mx-8">🔴 जनसेवा संदेश अब राष्ट्रीय स्तर पर विस्तार की ओर</span>
               <span className="mx-8">🔴 जरूरतमंदों की मदद के लिए नई पहल शुरू</span>
-              <span className="mx-8">🔴 आज की ताज़ा खबरें पढ़ें JSS पर</span>
             </div>
           </div>
         </div>

@@ -1,137 +1,133 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import NewsSection from "@/components/NewsSection";
-import TrendingSidebar from "@/components/TrendingSidebar";
-import NGOSection from "@/components/NGOSection";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
+import ArticleCardPublic, { ArticleCardSkeleton } from "@/components/ArticleCardPublic";
+import Pagination from "@/components/Pagination";
+import NGOSection from "@/components/NGOSection";
+import { TrendingUp, ArrowRight } from "lucide-react";
 
-// Import images
-import newsGaushala from "@/assets/news-gaushala.jpg";
-import newsCharity from "@/assets/news-charity.jpg";
-import newsNational from "@/assets/news-national.jpg";
-import newsInternational from "@/assets/news-international.jpg";
-import newsLocal from "@/assets/news-local.jpg";
-import newsSports from "@/assets/news-sports.jpg";
-
-const localNews = [
-  {
-    title: "स्थानीय गौशाला में 100 गायों की सेवा जारी",
-    excerpt: "श्री नन्देश्वर संस्थान की गौशाला में गायों की देखभाल के लिए नई सुविधाएं शुरू।",
-    image: newsGaushala,
-    category: "गौ सेवा",
-    time: "2 घंटे पहले",
-    categoryColor: "bg-green-600",
-  },
-  {
-    title: "ग्राम पंचायत में विकास कार्यों की समीक्षा",
-    excerpt: "स्थानीय प्रशासन ने गांव में सड़क और जल आपूर्ति परियोजनाओं का निरीक्षण किया।",
-    image: newsLocal,
-    category: "स्थानीय",
-    time: "4 घंटे पहले",
-    categoryColor: "bg-blue-600",
-  },
-  {
-    title: "जरूरतमंद परिवारों को राशन वितरण",
-    excerpt: "संस्थान द्वारा 500 परिवारों को मुफ्त राशन किट वितरित किए गए।",
-    image: newsCharity,
-    category: "जन सेवा",
-    time: "6 घंटे पहले",
-    categoryColor: "bg-orange-600",
-  },
-];
-
-const nationalNews = [
-  {
-    title: "संसद में नए विधेयक पर चर्चा जारी",
-    excerpt: "लोकसभा में महत्वपूर्ण विधेयक पर विपक्ष और सत्ता पक्ष के बीच बहस।",
-    image: newsNational,
-    category: "राजनीति",
-    time: "1 घंटा पहले",
-    categoryColor: "bg-red-600",
-  },
-  {
-    title: "भारतीय क्रिकेट टीम की शानदार जीत",
-    excerpt: "विश्व कप में भारत ने प्रतिद्वंद्वी टीम को 50 रनों से हराया।",
-    image: newsSports,
-    category: "खेल",
-    time: "3 घंटे पहले",
-    categoryColor: "bg-green-600",
-  },
-  {
-    title: "राष्ट्रीय स्तर पर नई शिक्षा नीति लागू",
-    excerpt: "केंद्र सरकार ने नई शिक्षा नीति के तहत कई सुधारों की घोषणा की।",
-    image: newsLocal,
-    category: "शिक्षा",
-    time: "5 घंटे पहले",
-    categoryColor: "bg-blue-600",
-  },
-];
-
-const internationalNews = [
-  {
-    title: "विश्व नेताओं की बैठक में जलवायु पर चर्चा",
-    excerpt: "संयुक्त राष्ट्र में जलवायु परिवर्तन पर महत्वपूर्ण समझौते की दिशा में कदम।",
-    image: newsInternational,
-    category: "अंतर्राष्ट्रीय",
-    time: "30 मिनट पहले",
-    categoryColor: "bg-navy",
-  },
-  {
-    title: "वैश्विक अर्थव्यवस्था में सुधार के संकेत",
-    excerpt: "प्रमुख देशों में आर्थिक विकास दर में वृद्धि देखी जा रही है।",
-    image: newsNational,
-    category: "व्यापार",
-    time: "2 घंटे पहले",
-    categoryColor: "bg-emerald-600",
-  },
-  {
-    title: "भारत-अमेरिका संबंधों में नई प्रगति",
-    excerpt: "दोनों देशों के बीच व्यापार और रक्षा समझौतों पर हस्ताक्षर।",
-    image: newsInternational,
-    category: "कूटनीति",
-    time: "4 घंटे पहले",
-    categoryColor: "bg-violet-600",
-  },
-];
+const PER_PAGE = 10;
 
 const Index = () => {
+  const [articles, setArticles] = useState<any[]>([]);
+  const [trending, setTrending] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    supabase.from("categories").select("id, name").order("name").then(({ data }) => setCategories(data ?? []));
+  }, []);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true);
+      const from = (page - 1) * PER_PAGE;
+      const { data, count } = await supabase
+        .from("articles")
+        .select("*, profiles:user_id(full_name), categories:category_id(name)", { count: "exact" })
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .range(from, from + PER_PAGE - 1);
+
+      setArticles(
+        (data ?? []).map((a: any) => ({
+          ...a,
+          category_name: a.categories?.name ?? null,
+          author_name: a.profiles?.full_name ?? null,
+        }))
+      );
+      setTotal(count ?? 0);
+      setLoading(false);
+    };
+    fetchArticles();
+  }, [page]);
+
+  useEffect(() => {
+    supabase
+      .from("articles")
+      .select("id, title, views_count, created_at")
+      .eq("status", "approved")
+      .order("views_count", { ascending: false })
+      .limit(5)
+      .then(({ data }) => setTrending(data ?? []));
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead />
       <Header />
       <main>
-        <HeroSection />
-        
-        {/* Main Content Area */}
-        <div className="container py-12 mt-8">
+        {/* Hero */}
+        <section className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-12 md:py-16">
+          <div className="container">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold leading-tight mb-4">
+              जनसेवा संदेश: सच्चाई की आवाज़
+            </h1>
+            <p className="text-primary-foreground/90 text-lg md:text-xl mb-6 max-w-2xl">
+              श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान के साथ मिलकर, स्थानीय से वैश्विक स्तर तक निष्पक्ष पत्रकारिता।
+            </p>
+          </div>
+        </section>
+
+        {/* Category Pills */}
+        {categories.length > 0 && (
+          <div className="container -mt-5 relative z-10">
+            <div className="flex flex-wrap justify-center gap-2 bg-card rounded-xl shadow-lg p-4 max-w-3xl mx-auto">
+              {categories.map((cat) => (
+                <Link key={cat.id} to={`/category/${cat.id}`} className="px-4 py-2 bg-muted hover:bg-accent hover:text-accent-foreground rounded-full text-sm font-medium transition-all font-hindi">
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="container py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* News Sections */}
             <div className="lg:col-span-2">
-              <NewsSection
-                id="local"
-                title="Local News"
-                titleHindi="स्थानीय समाचार"
-                news={localNews}
-              />
-              
-              <NewsSection
-                id="national"
-                title="National News"
-                titleHindi="राष्ट्रीय समाचार"
-                news={nationalNews}
-              />
-              
-              <NewsSection
-                id="international"
-                title="International News"
-                titleHindi="अंतर्राष्ट्रीय समाचार"
-                news={internationalNews}
-              />
+              <h2 className="section-title font-hindi">ताज़ा समाचार</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {loading
+                  ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)
+                  : articles.map((a, i) => (
+                    <ArticleCardPublic key={a.id} {...a} author_id={a.user_id} isLarge={i === 0} />
+                  ))}
+              </div>
+              {!loading && articles.length === 0 && (
+                <p className="text-center text-muted-foreground py-12">अभी कोई प्रकाशित समाचार नहीं है</p>
+              )}
+              <Pagination page={page} totalPages={Math.ceil(total / PER_PAGE)} onPageChange={setPage} />
             </div>
-            
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <TrendingSidebar />
-            </div>
+
+            {/* Trending Sidebar */}
+            <aside className="bg-card rounded-xl shadow-lg p-6 sticky top-32 h-fit">
+              <div className="flex items-center gap-2 mb-6">
+                <TrendingUp className="w-5 h-5 text-accent" />
+                <h3 className="font-heading font-bold text-lg text-card-foreground">ट्रेंडिंग</h3>
+              </div>
+              <div className="space-y-4">
+                {trending.map((item, i) => (
+                  <Link key={item.id} to={`/article/${item.id}`} className="flex gap-4 group">
+                    <span className="text-3xl font-heading font-bold text-accent/30 group-hover:text-accent transition-colors">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-card-foreground group-hover:text-accent transition-colors line-clamp-2 text-sm">
+                        {item.title}
+                      </h4>
+                      <span className="text-xs text-muted-foreground">{item.views_count} व्यू</span>
+                    </div>
+                  </Link>
+                ))}
+                {trending.length === 0 && <p className="text-sm text-muted-foreground">कोई ट्रेंडिंग नहीं</p>}
+              </div>
+            </aside>
           </div>
         </div>
 
