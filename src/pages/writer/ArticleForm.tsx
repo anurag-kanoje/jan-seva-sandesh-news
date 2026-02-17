@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ImageUpload from "@/components/ImageUpload";
 
 interface Category {
   id: string;
@@ -102,8 +103,9 @@ const ArticleForm = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="image">छवि URL</Label>
-            <Input id="image" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            <Label>छवि</Label>
+            {user && <ImageUpload userId={user.id} currentUrl={imageUrl} onUpload={setImageUrl} />}
+            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="या URL डालें https://..." className="mt-2" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="content">सामग्री *</Label>
