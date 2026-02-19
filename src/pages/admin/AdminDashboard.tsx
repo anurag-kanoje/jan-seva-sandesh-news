@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetch = async () => {
       const [articles, roles, cats] = await Promise.all([
-        supabase.from("articles").select("status, views_count"),
+        supabase.from("articles").select("status, views"),
         supabase.from("user_roles").select("id").eq("role", "writer"),
         supabase.from("categories").select("id"),
       ]);
@@ -21,7 +21,7 @@ const AdminDashboard = () => {
         approved: data.filter((a) => a.status === "approved").length,
         writers: roles.data?.length ?? 0,
         categories: cats.data?.length ?? 0,
-        totalViews: data.reduce((s, a) => s + a.views_count, 0),
+        totalViews: data.reduce((s, a: any) => s + a.views, 0),
       });
     };
     fetch();

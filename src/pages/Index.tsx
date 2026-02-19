@@ -29,7 +29,7 @@ const Index = () => {
       const from = (page - 1) * PER_PAGE;
       const { data, count } = await supabase
         .from("articles")
-        .select("*, profiles:user_id(full_name), categories:category_id(name)", { count: "exact" })
+        .select("*, profiles:author_id(full_name), categories:category_id(name)", { count: "exact" })
         .eq("status", "approved")
         .order("created_at", { ascending: false })
         .range(from, from + PER_PAGE - 1);
@@ -50,9 +50,9 @@ const Index = () => {
   useEffect(() => {
     supabase
       .from("articles")
-      .select("id, title, views_count, created_at")
+      .select("id, title, views, created_at")
       .eq("status", "approved")
-      .order("views_count", { ascending: false })
+      .order("views", { ascending: false })
       .limit(5)
       .then(({ data }) => setTrending(data ?? []));
   }, []);
@@ -96,7 +96,7 @@ const Index = () => {
                 {loading
                   ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)
                   : articles.map((a, i) => (
-                    <ArticleCardPublic key={a.id} {...a} author_id={a.user_id} isLarge={i === 0} />
+                    <ArticleCardPublic key={a.id} {...a} author_id={a.author_id} isLarge={i === 0} />
                   ))}
               </div>
               {!loading && articles.length === 0 && (
@@ -121,7 +121,7 @@ const Index = () => {
                       <h4 className="font-medium text-card-foreground group-hover:text-accent transition-colors line-clamp-2 text-sm">
                         {item.title}
                       </h4>
-                      <span className="text-xs text-muted-foreground">{item.views_count} व्यू</span>
+                      <span className="text-xs text-muted-foreground">{item.views} व्यू</span>
                     </div>
                   </Link>
                 ))}

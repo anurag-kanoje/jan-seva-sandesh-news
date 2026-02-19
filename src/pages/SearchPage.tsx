@@ -34,7 +34,7 @@ const SearchPage = () => {
       const searchTerm = `%${q.trim()}%`;
       const { data, count } = await supabase
         .from("articles")
-        .select("*, profiles:user_id(full_name), categories:category_id(name)", { count: "exact" })
+        .select("*, profiles:author_id(full_name), categories:category_id(name)", { count: "exact" })
         .eq("status", "approved")
         .or(`title.ilike.${searchTerm},excerpt.ilike.${searchTerm},content.ilike.${searchTerm}`)
         .order("created_at", { ascending: false })
@@ -72,7 +72,7 @@ const SearchPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)
-            : articles.map((a) => <ArticleCardPublic key={a.id} {...a} author_id={a.user_id} />)}
+            : articles.map((a) => <ArticleCardPublic key={a.id} {...a} author_id={a.author_id} />)}
         </div>
         {!loading && q && articles.length === 0 && (
           <p className="text-center text-muted-foreground py-12">कोई परिणाम नहीं मिला</p>

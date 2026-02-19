@@ -59,7 +59,7 @@ const ArticleForm = () => {
       excerpt: excerpt.trim(),
       category_id: categoryId || null,
       image_url: imageUrl.trim(),
-      user_id: user.id,
+      author_id: user.id,
     };
 
     let error;

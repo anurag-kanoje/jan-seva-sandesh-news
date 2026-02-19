@@ -13,7 +13,7 @@ interface Article {
   id: string;
   title: string;
   status: string;
-  views_count: number;
+  views: number;
   created_at: string;
   category_id: string | null;
 }
@@ -33,8 +33,8 @@ const WriterArticles = () => {
     if (!user) return;
     const { data } = await supabase
       .from("articles")
-      .select("id, title, status, views_count, created_at, category_id")
-      .eq("user_id", user.id)
+      .select("id, title, status, views, created_at, category_id")
+      .eq("author_id", user.id)
       .order("created_at", { ascending: false });
     setArticles(data ?? []);
   };
@@ -77,7 +77,7 @@ const WriterArticles = () => {
                 <TableRow key={a.id}>
                   <TableCell className="font-medium max-w-[200px] truncate">{a.title}</TableCell>
                   <TableCell>{statusBadge(a.status)}</TableCell>
-                  <TableCell><Eye className="w-3 h-3 inline mr-1" />{a.views_count}</TableCell>
+                  <TableCell><Eye className="w-3 h-3 inline mr-1" />{a.views}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString("hi-IN")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">

@@ -16,9 +16,9 @@ interface ArticleDetail {
   excerpt: string | null;
   image_url: string | null;
   created_at: string;
-  views_count: number;
+  views: number;
   category_id: string | null;
-  user_id: string;
+  author_id: string;
   category_name?: string;
   author_name?: string;
 }
@@ -35,7 +35,7 @@ const ArticlePage = () => {
       setLoading(true);
       const { data } = await supabase
         .from("articles")
-        .select("*, profiles:user_id(full_name), categories:category_id(name)")
+        .select("*, profiles:author_id(full_name), categories:category_id(name)")
         .eq("id", id)
         .eq("status", "approved")
         .single();
@@ -48,14 +48,14 @@ const ArticlePage = () => {
           author_name: a.profiles?.full_name ?? null,
         });
 
-        // Increment views
-        await supabase.from("articles").update({ views_count: a.views_count + 1 }).eq("id", id);
+        // Increment views via RPC
+        await supabase.rpc("increment_article_views", { article_id: id });
 
         // Fetch related articles
         if (a.category_id) {
           const { data: rel } = await supabase
             .from("articles")
-            .select("*, profiles:user_id(full_name), categories:category_id(name)")
+            .select("*, profiles:author_id(full_name), categories:category_id(name)")
             .eq("status", "approved")
             .eq("category_id", a.category_id)
             .neq("id", id)
@@ -128,11 +128,11 @@ const ArticlePage = () => {
         <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">{article.title}</h1>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6 flex-wrap">
-          <Link to={`/author/${article.user_id}`} className="flex items-center gap-1 hover:text-accent">
+          <Link to={`/author/${article.author_id}`} className="flex items-center gap-1 hover:text-accent">
             <User className="w-4 h-4" /> {article.author_name || "अज्ञात"}
           </Link>
           <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{dateStr}</span>
-          <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{article.views_count} व्यू</span>
+          <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{article.views} व्यू</span>
         </div>
 
         {article.image_url && (

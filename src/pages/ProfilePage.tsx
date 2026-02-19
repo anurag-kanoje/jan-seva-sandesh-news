@@ -22,13 +22,13 @@ const ProfilePage = () => {
       if (data) setFullName(data.full_name);
     });
 
-    supabase.from("articles").select("status, views_count").eq("user_id", user.id).then(({ data }) => {
+    supabase.from("articles").select("status, views").eq("author_id", user.id).then(({ data }) => {
       if (data) {
         setStats({
           total: data.length,
           approved: data.filter((a) => a.status === "approved").length,
           pending: data.filter((a) => a.status === "pending").length,
-          views: data.reduce((s, a) => s + a.views_count, 0),
+          views: data.reduce((s, a: any) => s + a.views, 0),
         });
       }
     });

@@ -13,9 +13,9 @@ interface Article {
   id: string;
   title: string;
   status: string;
-  views_count: number;
+  views: number;
   created_at: string;
-  user_id: string;
+  author_id: string;
   profiles?: { full_name: string } | null;
   categories?: { name: string } | null;
 }
@@ -30,7 +30,7 @@ const AdminArticles = () => {
     setLoading(true);
     let query = supabase
       .from("articles")
-      .select("id, title, status, views_count, created_at, user_id, profiles:user_id(full_name), categories:category_id(name)")
+      .select("id, title, status, views, created_at, author_id, profiles:author_id(full_name), categories:category_id(name)")
       .order("created_at", { ascending: false });
 
     if (filter !== "all") {
@@ -104,7 +104,7 @@ const AdminArticles = () => {
                     <TableCell className="text-sm">{(a.profiles as any)?.full_name || "—"}</TableCell>
                     <TableCell className="text-sm">{(a.categories as any)?.name || "—"}</TableCell>
                     <TableCell>{statusBadge(a.status)}</TableCell>
-                    <TableCell>{a.views_count}</TableCell>
+                    <TableCell>{a.views}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString("hi-IN")}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
