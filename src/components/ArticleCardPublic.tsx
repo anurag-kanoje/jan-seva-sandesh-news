@@ -12,12 +12,12 @@ interface ArticleCardPublicProps {
   author_name: string | null;
   author_id: string;
   created_at: string;
-  views_count: number;
+  views: number;
   isLarge?: boolean;
 }
 
 const ArticleCardPublic = ({
-  id, title, excerpt, image_url, category_name, author_name, author_id, created_at, views_count, isLarge = false,
+  id, title, excerpt, image_url, category_name, author_name, author_id, created_at, views, isLarge = false,
 }: ArticleCardPublicProps) => {
   const timeAgo = new Date(created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -44,7 +44,7 @@ const ArticleCardPublic = ({
             <User className="w-3 h-3" /> {author_name || "अज्ञात"}
           </Link>
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo}</span>
-          <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{views_count}</span>
+          <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{views}</span>
         </div>
       </div>
     </Link>

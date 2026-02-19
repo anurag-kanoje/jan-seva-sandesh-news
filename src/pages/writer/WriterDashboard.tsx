@@ -16,15 +16,15 @@ const WriterDashboard = () => {
     const fetchStats = async () => {
       const { data } = await supabase
         .from("articles")
-        .select("status, views_count")
-        .eq("user_id", user.id);
+        .select("status, views")
+        .eq("author_id", user.id);
       if (data) {
         setStats({
           total: data.length,
           pending: data.filter((a) => a.status === "pending").length,
           approved: data.filter((a) => a.status === "approved").length,
           rejected: data.filter((a) => a.status === "rejected").length,
-          views: data.reduce((sum, a) => sum + a.views_count, 0),
+          views: data.reduce((sum, a: any) => sum + a.views, 0),
         });
       }
     };

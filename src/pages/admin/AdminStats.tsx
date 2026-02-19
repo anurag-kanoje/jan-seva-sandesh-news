@@ -4,13 +4,13 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const AdminStats = () => {
-  const [topArticles, setTopArticles] = useState<{ title: string; views_count: number; status: string }[]>([]);
+  const [topArticles, setTopArticles] = useState<{ title: string; views: number; status: string }[]>([]);
 
   useEffect(() => {
     supabase
       .from("articles")
-      .select("title, views_count, status")
-      .order("views_count", { ascending: false })
+      .select("title, views, status")
+      .order("views", { ascending: false })
       .limit(10)
       .then(({ data }) => setTopArticles(data ?? []));
   }, []);
@@ -32,7 +32,7 @@ const AdminStats = () => {
                       <span className="font-bold mr-2">{i + 1}.</span>
                       {a.title}
                     </span>
-                    <span className="text-sm font-mono text-muted-foreground">{a.views_count} व्यू</span>
+                    <span className="text-sm font-mono text-muted-foreground">{a.views} व्यू</span>
                   </li>
                 ))}
               </ol>

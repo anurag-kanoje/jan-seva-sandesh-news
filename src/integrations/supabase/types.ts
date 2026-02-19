@@ -16,43 +16,46 @@ export type Database = {
     Tables: {
       articles: {
         Row: {
+          author_id: string
           category_id: string | null
           content: string
           created_at: string
           excerpt: string | null
           id: string
           image_url: string | null
+          slug: string | null
           status: string
           title: string
           updated_at: string
-          user_id: string
-          views_count: number
+          views: number
         }
         Insert: {
+          author_id: string
           category_id?: string | null
           content?: string
           created_at?: string
           excerpt?: string | null
           id?: string
           image_url?: string | null
+          slug?: string | null
           status?: string
           title: string
           updated_at?: string
-          user_id: string
-          views_count?: number
+          views?: number
         }
         Update: {
+          author_id?: string
           category_id?: string | null
           content?: string
           created_at?: string
           excerpt?: string | null
           id?: string
           image_url?: string | null
+          slug?: string | null
           status?: string
           title?: string
           updated_at?: string
-          user_id?: string
-          views_count?: number
+          views?: number
         }
         Relationships: [
           {
@@ -144,6 +147,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_article_views: {
+        Args: { article_id: string }
+        Returns: undefined
       }
     }
     Enums: {
