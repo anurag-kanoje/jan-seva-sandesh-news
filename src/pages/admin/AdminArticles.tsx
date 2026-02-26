@@ -30,7 +30,7 @@ const AdminArticles = () => {
     setLoading(true);
     let query = supabase
       .from("articles")
-      .select("id, title, status, views, created_at, author_id, profiles:author_id(full_name), categories:category_id(name)")
+      .select("id, title, status, views, created_at, author_id, slug, profiles:author_id(full_name), categories:category_id(name)")
       .order("created_at", { ascending: false });
 
     if (filter !== "all") {
@@ -108,7 +108,7 @@ const AdminArticles = () => {
                     <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString("hi-IN")}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Link to={`/article/${a.id}`} target="_blank">
+                        <Link to={`/article/${(a as any).slug || a.id}`} target="_blank">
                           <Button variant="ghost" size="icon" title="देखें"><ExternalLink className="w-4 h-4" /></Button>
                         </Link>
                         {a.status !== "approved" && (

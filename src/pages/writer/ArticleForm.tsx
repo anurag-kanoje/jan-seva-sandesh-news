@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUpload from "@/components/ImageUpload";
+import { generateUniqueSlug } from "@/lib/slug";
+import { canSubmitArticle } from "@/lib/rate-limit";
 
 interface Category {
   id: string;
@@ -51,16 +53,39 @@ const ArticleForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validation
+    if (title.trim().length < 5) {
+      toast({ title: "शीर्षक कम से कम 5 अक्षर का होना चाहिए", variant: "destructive" });
+      return;
+    }
+    if (content.trim().length < 50) {
+      toast({ title: "सामग्री कम से कम 50 अक्षर की होनी चाहिए", variant: "destructive" });
+      return;
+    }
+
+    // Rate limit
+    if (!canSubmitArticle()) {
+      toast({ title: "कृपया कुछ सेकंड प्रतीक्षा करें", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
 
-    const articleData = {
+    const articleData: any = {
       title: title.trim(),
       content: content.trim(),
       excerpt: excerpt.trim(),
       category_id: categoryId || null,
-      image_url: imageUrl.trim(),
+      image_url: imageUrl.trim() || null,
       author_id: user.id,
     };
+
+    if (!isEditing) {
+      articleData.slug = generateUniqueSlug(title);
+      articleData.status = "pending";
+      articleData.views = 0;
+    }
 
     let error;
     if (isEditing) {
@@ -84,7 +109,7 @@ const ArticleForm = () => {
         <h1 className="text-2xl font-heading font-bold">{isEditing ? "लेख संपादित करें" : "नया लेख लिखें"}</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">शीर्षक *</Label>
+            <Label htmlFor="title">शीर्षक * (कम से कम 5 अक्षर)</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} />
           </div>
           <div className="space-y-2">
@@ -108,7 +133,7 @@ const ArticleForm = () => {
             <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="या URL डालें https://..." className="mt-2" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="content">सामग्री *</Label>
+            <Label htmlFor="content">सामग्री * (कम से कम 50 अक्षर)</Label>
             <textarea
               id="content"
               value={content}

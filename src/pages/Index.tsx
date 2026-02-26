@@ -50,7 +50,7 @@ const Index = () => {
   useEffect(() => {
     supabase
       .from("articles")
-      .select("id, title, views, created_at")
+      .select("id, title, views, created_at, slug")
       .eq("status", "approved")
       .order("views", { ascending: false })
       .limit(5)
@@ -113,7 +113,7 @@ const Index = () => {
               </div>
               <div className="space-y-4">
                 {trending.map((item, i) => (
-                  <Link key={item.id} to={`/article/${item.id}`} className="flex gap-4 group">
+                  <Link key={item.id} to={`/article/${item.slug || item.id}`} className="flex gap-4 group">
                     <span className="text-3xl font-heading font-bold text-accent/30 group-hover:text-accent transition-colors">
                       {String(i + 1).padStart(2, "0")}
                     </span>

@@ -11,18 +11,20 @@ interface ArticleCardPublicProps {
   category_name: string | null;
   author_name: string | null;
   author_id: string;
+  slug: string | null;
   created_at: string;
   views: number;
   isLarge?: boolean;
 }
 
 const ArticleCardPublic = ({
-  id, title, excerpt, image_url, category_name, author_name, author_id, created_at, views, isLarge = false,
+  id, title, excerpt, image_url, category_name, author_name, author_id, slug, created_at, views, isLarge = false,
 }: ArticleCardPublicProps) => {
   const timeAgo = new Date(created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "short", year: "numeric" });
+  const articleUrl = slug ? `/article/${slug}` : `/article/${id}`;
 
   return (
-    <Link to={`/article/${id}`} className={`news-card group ${isLarge ? "md:col-span-2" : ""}`}>
+    <Link to={articleUrl} className={`news-card group ${isLarge ? "md:col-span-2" : ""}`}>
       <div className={`relative overflow-hidden ${isLarge ? "h-64 md:h-80" : "h-48"}`}>
         {image_url ? (
           <img src={image_url} alt={title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
