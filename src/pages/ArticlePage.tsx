@@ -8,6 +8,7 @@ import ArticleCardPublic from "@/components/ArticleCardPublic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Eye, User, ArrowLeft } from "lucide-react";
+import { hasViewedArticle, markArticleViewed } from "@/lib/rate-limit";
 
 interface ArticleDetail {
   id: string;
@@ -19,25 +20,25 @@ interface ArticleDetail {
   views: number;
   category_id: string | null;
   author_id: string;
+  slug: string | null;
   category_name?: string;
   author_name?: string;
 }
 
 const ArticlePage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [related, setRelated] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     const fetchArticle = async () => {
       setLoading(true);
       const { data } = await supabase
         .from("articles")
         .select("*, profiles:author_id(full_name), categories:category_id(name)")
-        .eq("id", id)
-        .eq("status", "approved")
+        .eq("slug", slug)
         .single();
 
       if (data) {
@@ -48,17 +49,20 @@ const ArticlePage = () => {
           author_name: a.profiles?.full_name ?? null,
         });
 
-        // Increment views via RPC
-        await supabase.rpc("increment_article_views", { article_id: id });
+        // Throttled view increment — once per session per article
+        if (!hasViewedArticle(a.id)) {
+          markArticleViewed(a.id);
+          await supabase.rpc("increment_article_views", { article_id: a.id });
+        }
 
-        // Fetch related articles
+        // Related articles
         if (a.category_id) {
           const { data: rel } = await supabase
             .from("articles")
             .select("*, profiles:author_id(full_name), categories:category_id(name)")
             .eq("status", "approved")
             .eq("category_id", a.category_id)
-            .neq("id", id)
+            .neq("id", a.id)
             .order("created_at", { ascending: false })
             .limit(3);
           setRelated(
@@ -73,7 +77,7 @@ const ArticlePage = () => {
       setLoading(false);
     };
     fetchArticle();
-  }, [id]);
+  }, [slug]);
 
   if (loading) {
     return (
