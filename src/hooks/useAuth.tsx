@@ -9,7 +9,7 @@ interface AuthContextType {
   role: AppRole;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -21,21 +21,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setRole(data?.role ?? null);
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+      setRole(data?.role ?? null);
+    } catch (err) {
+      console.error("Failed to fetch role:", err);
+      setRole(null);
+    }
   };
 
   useEffect(() => {
+    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log("[Auth] State changed:", event, session?.user?.email);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          await fetchRole(currentUser.id);
+          // Use setTimeout to avoid potential deadlock with Supabase internals
+          setTimeout(() => fetchRole(currentUser.id), 0);
         } else {
           setRole(null);
         }
@@ -43,11 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[Auth] Initial session:", session?.user?.email ?? "none");
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        fetchRole(currentUser.id);
+        fetchRole(currentUser.id).then(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -57,24 +67,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    console.log("[Auth] Login attempt:", email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("[Auth] Login result:", { user: data?.user?.email, error: error?.message });
+
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        return { error: "ईमेल या पासवर्ड गलत है।" };
+      }
+      if (error.message.includes("Email not confirmed")) {
+        return { error: "कृपया पहले अपना ईमेल सत्यापित करें।" };
+      }
+      return { error: error.message };
+    }
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
+    console.log("[Auth] Signup attempt:", email);
+    const redirectUrl = window.location.origin;
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectUrl,
         data: { full_name: fullName },
       },
     });
-    return { error: error?.message ?? null };
+    console.log("[Auth] Signup result:", { user: data?.user?.email, error: error?.message });
+
+    if (error) {
+      if (error.message.includes("already registered")) {
+        return { error: "यह ईमेल पहले से पंजीकृत है। कृपया लॉगिन करें।", needsVerification: false };
+      }
+      return { error: error.message, needsVerification: false };
+    }
+
+    const needsVerification = !!(data.user && !data.user.email_confirmed_at);
+    return { error: null, needsVerification };
   };
 
   const signOut = async () => {
+    console.log("[Auth] Signing out");
     await supabase.auth.signOut();
+    setUser(null);
+    setRole(null);
   };
 
   return (

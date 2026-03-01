@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,22 +13,41 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Redirect if already logged in
+  if (user) {
+    navigate("/dashboard", { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      toast({ title: "कृपया अपना नाम दर्ज करें", variant: "destructive" });
+      return;
+    }
     if (password.length < 6) {
       toast({ title: "पासवर्ड कम से कम 6 अक्षर का होना चाहिए", variant: "destructive" });
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password, fullName);
-    setIsLoading(false);
-    if (error) {
-      toast({ title: "साइन अप विफल", description: error, variant: "destructive" });
-    } else {
-      toast({ title: "सफल!", description: "कृपया अपना ईमेल सत्यापित करें।" });
+    try {
+      const { error, needsVerification } = await signUp(email.trim(), password, fullName.trim());
+      if (error) {
+        toast({ title: "साइन अप विफल", description: error, variant: "destructive" });
+      } else if (needsVerification) {
+        toast({ title: "सफल!", description: "कृपया अपने ईमेल को verify करें।" });
+      } else {
+        toast({ title: "खाता बन गया!", description: "आप अब लॉगिन कर सकते हैं।" });
+        navigate("/login", { replace: true });
+      }
+    } catch (err) {
+      toast({ title: "नेटवर्क त्रुटि", description: "कृपया इंटरनेट कनेक्शन जांचें", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,7 +55,7 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={logo} alt="JSS" className="h-16 mx-auto mb-4" />
+          <img src={logo} alt="JSS" className="h-16 mx-auto mb-4" loading="lazy" />
           <CardTitle className="text-2xl font-heading">साइन अप करें</CardTitle>
           <CardDescription>जन सेवा संदेश पर नया खाता बनाएं</CardDescription>
         </CardHeader>
@@ -44,15 +63,15 @@ const Signup = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">पूरा नाम</Label>
-              <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+              <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required autoComplete="name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">ईमेल</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">पासवर्ड</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
