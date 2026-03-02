@@ -27,11 +27,12 @@ const SearchPage = () => {
   }, [q]);
 
   useEffect(() => {
-    if (!q.trim()) { setArticles([]); setTotal(0); return; }
+    const trimmed = q.trim().slice(0, 200);
+    if (!trimmed) { setArticles([]); setTotal(0); return; }
     const fetchResults = async () => {
       setLoading(true);
       const from = (page - 1) * PER_PAGE;
-      const searchTerm = `%${q.trim()}%`;
+      const searchTerm = `%${trimmed}%`;
       const { data, count } = await supabase
         .from("articles")
         .select("*, profiles:author_id(full_name), categories:category_id(name)", { count: "exact" })
