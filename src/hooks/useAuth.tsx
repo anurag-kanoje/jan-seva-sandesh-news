@@ -37,8 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("[Auth] State changed:", event, session?.user?.email);
+      async (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
@@ -53,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("[Auth] Initial session:", session?.user?.email ?? "none");
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -67,9 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log("[Auth] Login attempt:", email);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    console.log("[Auth] Login result:", { user: data?.user?.email, error: error?.message });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
@@ -84,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    console.log("[Auth] Signup attempt:", email);
     const redirectUrl = window.location.origin;
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -94,8 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: { full_name: fullName },
       },
     });
-    console.log("[Auth] Signup result:", { user: data?.user?.email, error: error?.message });
-
     if (error) {
       if (error.message.includes("already registered")) {
         return { error: "यह ईमेल पहले से पंजीकृत है। कृपया लॉगिन करें।", needsVerification: false };
@@ -108,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    console.log("[Auth] Signing out");
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);

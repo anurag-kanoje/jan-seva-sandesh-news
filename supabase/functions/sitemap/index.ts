@@ -11,7 +11,7 @@ Deno.serve(async () => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const siteUrl = "https://id-preview--54733108-2531-4cce-96b4-396bd7641006.lovable.app";
+  const siteUrl = Deno.env.get("SITE_URL") || "https://jss-news-foundation.lovable.app";
 
   const { data: articles } = await supabase
     .from("articles")
