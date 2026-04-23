@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-type AppRole = "admin" | "writer" | null;
+type AppRole = "admin" | "writer" | "user" | null;
 
 interface AuthContextType {
   user: User | null;
@@ -30,9 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
-      setRole(data?.role ?? null);
+      setRole(data?.role ?? "user");
     } catch {
-      setRole(null);
+      setRole("user");
     } finally {
       setRoleLoading(false);
     }
