@@ -11,6 +11,7 @@ interface AuthContextType {
   roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification: boolean }>;
+  resendVerification: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -96,6 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (error) {
+      if (error.message.toLowerCase().includes("weak") || error.message.toLowerCase().includes("pwned")) {
+        return {
+          error: "यह पासवर्ड बहुत कमजोर है। कम से कम 8 अक्षर रखें और बड़े अक्षर, छोटे अक्षर, संख्या व विशेष चिन्ह का उपयोग करें।",
+          needsVerification: false,
+        };
+      }
       if (error.message.includes("already registered")) {
         return { error: "यह ईमेल पहले से पंजीकृत है। कृपया लॉगिन करें।", needsVerification: false };
       }
@@ -106,6 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null, needsVerification };
   };
 
+  const resendVerification = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      return { error: "वेरिफिकेशन ईमेल दोबारा भेजने में दिक्कत आई। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
+    }
+
+    return { error: null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -114,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, roleLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, roleLoading, signIn, signUp, resendVerification, signOut }}>
       {children}
     </AuthContext.Provider>
   );
