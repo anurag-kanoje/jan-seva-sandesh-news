@@ -20,15 +20,19 @@ const writerLinks = [
   { to: "/profile", icon: User, label: "प्रोफ़ाइल" },
 ];
 
+const userLinks = [
+  { to: "/profile", icon: User, label: "मेरा पैनल" },
+];
+
 interface DashboardLayoutProps {
   children: ReactNode;
-  type: "admin" | "writer";
+  type: "admin" | "writer" | "user";
 }
 
 const DashboardLayout = ({ children, type }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
   const location = useLocation();
-  const links = type === "admin" ? adminLinks : writerLinks;
+  const links = type === "admin" ? adminLinks : type === "writer" ? writerLinks : userLinks;
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -39,7 +43,7 @@ const DashboardLayout = ({ children, type }: DashboardLayoutProps) => {
             <img src={logo} alt="JSS" className="h-10 object-contain" />
           </Link>
           <p className="text-xs text-muted-foreground mt-1">
-            {type === "admin" ? "एडमिन पैनल" : "लेखक पैनल"}
+            {type === "admin" ? "एडमिन पैनल" : type === "writer" ? "लेखक पैनल" : "उपयोगकर्ता पैनल"}
           </p>
         </div>
         <nav className="flex-1 p-3 space-y-1">

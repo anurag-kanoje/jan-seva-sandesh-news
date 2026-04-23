@@ -46,6 +46,11 @@ const AdminUsers = () => {
   useEffect(() => { fetchUsers(); }, []);
 
   const assignRole = async (userId: string, role: string) => {
+    if (role === "user") {
+      await removeRole(userId);
+      return;
+    }
+
     // Check if user already has a role
     const existing = users.find((u) => u.user_id === userId);
     if (existing?.role_id) {
@@ -101,11 +106,12 @@ const AdminUsers = () => {
                     <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString("hi-IN")}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Select value={u.role ?? ""} onValueChange={(val) => assignRole(u.user_id, val)}>
+                        <Select value={u.role ?? "user"} onValueChange={(val) => assignRole(u.user_id, val)}>
                           <SelectTrigger className="w-32 h-8">
                             <SelectValue placeholder="भूमिका चुनें" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="user">सामान्य</SelectItem>
                             <SelectItem value="writer">लेखक</SelectItem>
                             <SelectItem value="admin">एडमिन</SelectItem>
                           </SelectContent>

@@ -14,7 +14,8 @@ const Dashboard = () => {
 
   if (role === "admin") return <Navigate to="/admin" replace />;
   if (role === "writer") return <Navigate to="/writer" replace />;
-  return <Navigate to="/" replace />;
+  if (role === "user") return <Navigate to="/profile" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 export default Dashboard;

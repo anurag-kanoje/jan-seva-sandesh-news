@@ -44,6 +44,7 @@ const ProfilePage = () => {
   };
 
   const dashboardType = role === "admin" ? "admin" : "writer";
+  const showWriterStats = role === "admin" || role === "writer";
 
   return (
     <DashboardLayout type={dashboardType as "admin" | "writer"}>
@@ -67,22 +68,24 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "कुल लेख", value: stats.total, icon: FileText },
-            { label: "स्वीकृत", value: stats.approved, icon: CheckCircle },
-            { label: "लंबित", value: stats.pending, icon: Clock },
-            { label: "कुल व्यू", value: stats.views, icon: Eye },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-4 flex flex-col items-center gap-1">
-                <s.icon className="w-5 h-5 text-primary" />
-                <span className="text-2xl font-bold">{s.value}</span>
-                <span className="text-xs text-muted-foreground">{s.label}</span>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {showWriterStats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "कुल लेख", value: stats.total, icon: FileText },
+              { label: "स्वीकृत", value: stats.approved, icon: CheckCircle },
+              { label: "लंबित", value: stats.pending, icon: Clock },
+              { label: "कुल व्यू", value: stats.views, icon: Eye },
+            ].map((s) => (
+              <Card key={s.label}>
+                <CardContent className="pt-4 flex flex-col items-center gap-1">
+                  <s.icon className="w-5 h-5 text-primary" />
+                  <span className="text-2xl font-bold">{s.value}</span>
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -78,7 +78,7 @@ const Header = () => {
 
             {user ? (
               <>
-                {(role === "admin" || role === "writer") && (
+                {role && (
                   <Link to="/dashboard">
                     <Button variant="outline" size="sm" className="hidden sm:flex gap-1">
                       <LayoutDashboard className="w-4 h-4" /> डैशबोर्ड
@@ -128,7 +128,7 @@ const Header = () => {
                   </Link>
                 )
               )}
-              {user && (role === "admin" || role === "writer") && (
+              {user && role && (
                 <Link to="/dashboard" className="py-2 px-4 text-foreground hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
                   डैशबोर्ड
                 </Link>
