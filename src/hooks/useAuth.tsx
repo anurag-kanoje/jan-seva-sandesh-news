@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   role: AppRole;
   loading: boolean;
+  roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification: boolean }>;
   signOut: () => Promise<void>;
@@ -19,8 +20,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
+    setRoleLoading(true);
     try {
       const { data } = await supabase
         .from("user_roles")
@@ -28,9 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("user_id", userId)
         .maybeSingle();
       setRole(data?.role ?? null);
-    } catch (err) {
-      console.error("Failed to fetch role:", err);
+    } catch {
       setRole(null);
+    } finally {
+      setRoleLoading(false);
     }
   };
 
@@ -45,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => fetchRole(currentUser.id), 0);
         } else {
           setRole(null);
+          setRoleLoading(false);
         }
         setLoading(false);
       }
@@ -57,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentUser) {
         fetchRole(currentUser.id).then(() => setLoading(false));
       } else {
+        setRoleLoading(false);
         setLoading(false);
       }
     });
@@ -104,10 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    setRoleLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, roleLoading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
