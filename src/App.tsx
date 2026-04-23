@@ -55,7 +55,7 @@ const App = () => (
                 <Route path="/writer/articles" element={<ProtectedRoute allowedRoles={["writer", "admin"]}><WriterArticles /></ProtectedRoute>} />
                 <Route path="/writer/new" element={<ProtectedRoute allowedRoles={["writer", "admin"]}><ArticleForm /></ProtectedRoute>} />
                 <Route path="/writer/edit/:id" element={<ProtectedRoute allowedRoles={["writer", "admin"]}><ArticleForm /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute allowedRoles={["writer", "admin"]}><ProfilePage /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute allowedRoles={["user", "writer", "admin"]}><ProfilePage /></ProtectedRoute>} />
 
                 {/* Admin routes */}
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
