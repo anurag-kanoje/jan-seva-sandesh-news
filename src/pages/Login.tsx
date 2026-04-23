@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import PasswordField from "@/components/PasswordField";
 import logo from "@/assets/logo.jpg";
 
 const Login = () => {
@@ -61,7 +62,7 @@ const Login = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">पासवर्ड</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+              <PasswordField id="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
