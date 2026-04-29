@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
+import AdSlot from "@/components/AdSlot";
 import ArticleCardPublic from "@/components/ArticleCardPublic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -114,8 +115,27 @@ const ArticlePage = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title={`${article.title} - जन सेवा संदेश`}
-        description={article.excerpt || article.title}
+        description={(article.excerpt || article.title).slice(0, 160)}
         image={article.image_url || undefined}
+        type="article"
+        publishedAt={article.created_at}
+        author={article.author_name}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: article.title,
+          image: article.image_url ? [article.image_url] : undefined,
+          datePublished: article.created_at,
+          author: article.author_name
+            ? { "@type": "Person", name: article.author_name }
+            : undefined,
+          publisher: {
+            "@type": "Organization",
+            name: "जन सेवा संदेश",
+          },
+          articleSection: article.category_name || undefined,
+          description: article.excerpt || article.title,
+        }}
       />
       <Header />
       <main className="container py-8 max-w-4xl">
@@ -146,6 +166,8 @@ const ArticlePage = () => {
         <article className="prose prose-lg max-w-none text-foreground leading-relaxed whitespace-pre-wrap">
           {article.content}
         </article>
+
+        <AdSlot slot="article-bottom" className="mt-8" height="h-28" />
 
         {related.length > 0 && (
           <section className="mt-12">

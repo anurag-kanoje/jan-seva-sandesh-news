@@ -59,7 +59,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead />
+      <SEOHead
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "NewsMediaOrganization",
+          name: "जन सेवा संदेश",
+          url: typeof window !== "undefined" ? window.location.origin : undefined,
+          description:
+            "जन सेवा संदेश - स्थानीय से वैश्विक स्तर तक निष्पक्ष समाचार। श्री नन्देश्वर शिक्षा एवं जनसेवा संस्थान।",
+        }}
+      />
       <Header />
       <main>
         {/* Hero */}
