@@ -69,6 +69,7 @@ const Login = () => {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "लॉगिन हो रहा है..." : "लॉगिन"}
             </Button>
+            <Link to="/forgot-password" className="text-sm text-accent hover:underline">पासवर्ड भूल गए?</Link>
             <p className="text-sm text-muted-foreground">
               खाता नहीं है?{" "}
               <Link to="/signup" className="text-accent hover:underline">साइन अप करें</Link>

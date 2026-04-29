@@ -43,11 +43,12 @@ const ProfilePage = () => {
     else toast({ title: "प्रोफ़ाइल अपडेट हुई" });
   };
 
-  const dashboardType = role === "admin" ? "admin" : "writer";
+  const dashboardType: "admin" | "writer" | "user" =
+    role === "admin" ? "admin" : role === "writer" ? "writer" : "user";
   const showWriterStats = role === "admin" || role === "writer";
 
   return (
-    <DashboardLayout type={dashboardType as "admin" | "writer"}>
+    <DashboardLayout type={dashboardType}>
       <div className="space-y-6 max-w-2xl">
         <h1 className="text-2xl font-heading font-bold">मेरी प्रोफ़ाइल</h1>
 

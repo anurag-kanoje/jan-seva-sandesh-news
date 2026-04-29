@@ -114,8 +114,27 @@ const ArticlePage = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title={`${article.title} - जन सेवा संदेश`}
-        description={article.excerpt || article.title}
+        description={(article.excerpt || article.title).slice(0, 160)}
         image={article.image_url || undefined}
+        type="article"
+        publishedAt={article.created_at}
+        author={article.author_name}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: article.title,
+          image: article.image_url ? [article.image_url] : undefined,
+          datePublished: article.created_at,
+          author: article.author_name
+            ? { "@type": "Person", name: article.author_name }
+            : undefined,
+          publisher: {
+            "@type": "Organization",
+            name: "जन सेवा संदेश",
+          },
+          articleSection: article.category_name || undefined,
+          description: article.excerpt || article.title,
+        }}
       />
       <Header />
       <main className="container py-8 max-w-4xl">
