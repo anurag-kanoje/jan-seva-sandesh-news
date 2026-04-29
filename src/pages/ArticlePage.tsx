@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
+import AdSlot from "@/components/AdSlot";
 import ArticleCardPublic from "@/components/ArticleCardPublic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +166,8 @@ const ArticlePage = () => {
         <article className="prose prose-lg max-w-none text-foreground leading-relaxed whitespace-pre-wrap">
           {article.content}
         </article>
+
+        <AdSlot slot="article-bottom" className="mt-8" height="h-28" />
 
         {related.length > 0 && (
           <section className="mt-12">
