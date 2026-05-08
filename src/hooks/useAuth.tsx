@@ -78,9 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error.message.includes("Invalid login credentials")) {
         return { error: "ईमेल या पासवर्ड गलत है।" };
       }
-      if (error.message.includes("Email not confirmed")) {
-        return { error: "कृपया पहले अपना ईमेल सत्यापित करें।" };
-      }
       return { error: error.message };
     }
     return { error: null };

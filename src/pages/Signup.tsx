@@ -14,13 +14,10 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [verificationPending, setVerificationPending] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const { signUp, resendVerification, user } = useAuth();
+  const { signUp, signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) navigate("/dashboard", { replace: true });
   }, [user, navigate]);
@@ -39,37 +36,24 @@ const Signup = () => {
     }
     setIsLoading(true);
     try {
-      const { error, needsVerification } = await signUp(email.trim(), password, fullName.trim());
+      const { error } = await signUp(email.trim(), password, fullName.trim());
       if (error) {
         toast({ title: "साइन अप विफल", description: error, variant: "destructive" });
-      } else if (needsVerification) {
-        setVerificationPending(true);
-        toast({ title: "सफल!", description: "वेरिफिकेशन ईमेल भेज दी गई है। अपने inbox और spam folder दोनों देखें।" });
-      } else {
-        toast({ title: "खाता बन गया!", description: "आप अब लॉगिन कर सकते हैं।" });
-        navigate("/login", { replace: true });
+        return;
       }
-    } catch (err) {
+      // Auto-confirm enabled — try immediate login
+      const { error: signInErr } = await signIn(email.trim(), password);
+      if (signInErr) {
+        toast({ title: "खाता बन गया!", description: "अब लॉगिन करें।" });
+        navigate("/login", { replace: true });
+      } else {
+        toast({ title: "स्वागत है!", description: "आप सफलतापूर्वक लॉगिन हो गए हैं।" });
+        navigate("/dashboard", { replace: true });
+      }
+    } catch {
       toast({ title: "नेटवर्क त्रुटि", description: "कृपया इंटरनेट कनेक्शन जांचें", variant: "destructive" });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!email.trim()) {
-      toast({ title: "पहले ईमेल दर्ज करें", variant: "destructive" });
-      return;
-    }
-
-    setIsResending(true);
-    const { error } = await resendVerification(email.trim());
-    setIsResending(false);
-
-    if (error) {
-      toast({ title: "ईमेल दोबारा नहीं भेजी जा सकी", description: error, variant: "destructive" });
-    } else {
-      toast({ title: "वेरिफिकेशन ईमेल फिर से भेज दी गई" });
     }
   };
 
@@ -102,20 +86,13 @@ const Signup = () => {
                 allowGenerate
                 onGenerate={setPassword}
               />
-              <p className="text-xs text-muted-foreground">
-                कम से कम 8 अक्षर रखें और बड़े अक्षर, छोटे अक्षर, संख्या व विशेष चिन्ह मिलाएँ।
-              </p>
+              <p className="text-xs text-muted-foreground">कम से कम 6 अक्षर का पासवर्ड चुनें।</p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "खाता बना रहे हैं..." : "साइन अप"}
             </Button>
-            {verificationPending && (
-              <Button type="button" variant="outline" className="w-full" onClick={handleResendVerification} disabled={isResending}>
-                {isResending ? "ईमेल भेज रहे हैं..." : "वेरिफिकेशन ईमेल फिर से भेजें"}
-              </Button>
-            )}
             <p className="text-sm text-muted-foreground">
               पहले से खाता है?{" "}
               <Link to="/login" className="text-accent hover:underline">लॉगिन करें</Link>
