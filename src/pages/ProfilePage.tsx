@@ -97,6 +97,49 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
+        {canApply && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><PenSquare className="w-5 h-5" /> लेखक बनें</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {application ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">आवेदन की स्थिति:</span>
+                    {application.status === "pending" && <Badge className="bg-yellow-600">समीक्षाधीन</Badge>}
+                    {application.status === "approved" && <Badge className="bg-green-600">स्वीकृत</Badge>}
+                    {application.status === "rejected" && <Badge variant="destructive">अस्वीकृत</Badge>}
+                  </div>
+                  <p className="text-sm text-muted-foreground"><strong>कारण:</strong> {application.reason}</p>
+                  {application.review_notes && (
+                    <p className="text-sm text-muted-foreground"><strong>एडमिन टिप्पणी:</strong> {application.review_notes}</p>
+                  )}
+                  {application.status === "approved" && (
+                    <p className="text-sm text-green-700">कृपया दोबारा लॉगिन करें ताकि आपकी नई भूमिका सक्रिय हो जाए।</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    जन सेवा संदेश के लिए लेख लिखना चाहते हैं? कृपया संक्षेप में बताएं कि आप क्यों लिखना चाहते हैं।
+                  </p>
+                  <Textarea
+                    rows={4}
+                    placeholder="अपना संक्षिप्त परिचय और लिखने का कारण लिखें (कम से कम 20 अक्षर)..."
+                    value={appReason}
+                    onChange={(e) => setAppReason(e.target.value)}
+                    maxLength={1000}
+                  />
+                  <Button onClick={submitApplication} disabled={submittingApp}>
+                    {submittingApp ? "जमा कर रहे हैं..." : "आवेदन जमा करें"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {showWriterStats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
