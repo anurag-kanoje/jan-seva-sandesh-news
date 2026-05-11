@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Eye, CheckCircle, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Eye, CheckCircle, Clock, PenSquare } from "lucide-react";
 
 const ProfilePage = () => {
   const { user, role } = useAuth();
@@ -15,12 +17,23 @@ const ProfilePage = () => {
   const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, views: 0 });
+  const [application, setApplication] = useState<{ status: string; reason: string; review_notes?: string } | null>(null);
+  const [appReason, setAppReason] = useState("");
+  const [submittingApp, setSubmittingApp] = useState(false);
+
+  const fetchApplication = () => {
+    if (!user) return;
+    supabase.from("writer_applications" as any).select("status, reason, review_notes").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      setApplication(data ?? null);
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle().then(({ data }) => {
       if (data?.full_name) setFullName(data.full_name);
     });
+    fetchApplication();
 
     supabase.from("articles").select("status, views").eq("author_id", user.id).then(({ data }) => {
       if (data) {
@@ -45,9 +58,22 @@ const ProfilePage = () => {
     else toast({ title: "प्रोफ़ाइल अपडेट हुई" });
   };
 
+  const submitApplication = async () => {
+    if (!user || appReason.trim().length < 20) {
+      toast({ title: "कृपया कम से कम 20 अक्षर का कारण लिखें", variant: "destructive" });
+      return;
+    }
+    setSubmittingApp(true);
+    const { error } = await supabase.from("writer_applications" as any).insert({ user_id: user.id, reason: appReason.trim() });
+    setSubmittingApp(false);
+    if (error) toast({ title: "त्रुटि", description: error.message, variant: "destructive" });
+    else { toast({ title: "आवेदन जमा हो गया", description: "एडमिन की समीक्षा का इंतज़ार करें।" }); setAppReason(""); fetchApplication(); }
+  };
+
   const dashboardType: "admin" | "writer" | "user" =
     role === "admin" ? "admin" : role === "writer" ? "writer" : "user";
   const showWriterStats = role === "admin" || role === "writer";
+  const canApply = role === "user" || role === null;
 
   return (
     <DashboardLayout type={dashboardType}>
@@ -70,6 +96,49 @@ const ProfilePage = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {canApply && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><PenSquare className="w-5 h-5" /> लेखक बनें</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {application ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">आवेदन की स्थिति:</span>
+                    {application.status === "pending" && <Badge className="bg-yellow-600">समीक्षाधीन</Badge>}
+                    {application.status === "approved" && <Badge className="bg-green-600">स्वीकृत</Badge>}
+                    {application.status === "rejected" && <Badge variant="destructive">अस्वीकृत</Badge>}
+                  </div>
+                  <p className="text-sm text-muted-foreground"><strong>कारण:</strong> {application.reason}</p>
+                  {application.review_notes && (
+                    <p className="text-sm text-muted-foreground"><strong>एडमिन टिप्पणी:</strong> {application.review_notes}</p>
+                  )}
+                  {application.status === "approved" && (
+                    <p className="text-sm text-green-700">कृपया दोबारा लॉगिन करें ताकि आपकी नई भूमिका सक्रिय हो जाए।</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    जन सेवा संदेश के लिए लेख लिखना चाहते हैं? कृपया संक्षेप में बताएं कि आप क्यों लिखना चाहते हैं।
+                  </p>
+                  <Textarea
+                    rows={4}
+                    placeholder="अपना संक्षिप्त परिचय और लिखने का कारण लिखें (कम से कम 20 अक्षर)..."
+                    value={appReason}
+                    onChange={(e) => setAppReason(e.target.value)}
+                    maxLength={1000}
+                  />
+                  <Button onClick={submitApplication} disabled={submittingApp}>
+                    {submittingApp ? "जमा कर रहे हैं..." : "आवेदन जमा करें"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {showWriterStats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
