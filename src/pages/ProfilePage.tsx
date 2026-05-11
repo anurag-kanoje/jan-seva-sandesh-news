@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Eye, CheckCircle, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Eye, CheckCircle, Clock, PenSquare } from "lucide-react";
 
 const ProfilePage = () => {
   const { user, role } = useAuth();
@@ -15,12 +17,23 @@ const ProfilePage = () => {
   const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, views: 0 });
+  const [application, setApplication] = useState<{ status: string; reason: string; review_notes?: string } | null>(null);
+  const [appReason, setAppReason] = useState("");
+  const [submittingApp, setSubmittingApp] = useState(false);
+
+  const fetchApplication = () => {
+    if (!user) return;
+    supabase.from("writer_applications" as any).select("status, reason, review_notes").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      setApplication(data ?? null);
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle().then(({ data }) => {
       if (data?.full_name) setFullName(data.full_name);
     });
+    fetchApplication();
 
     supabase.from("articles").select("status, views").eq("author_id", user.id).then(({ data }) => {
       if (data) {
