@@ -18,8 +18,8 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("full_name").eq("user_id", user.id).single().then(({ data }) => {
-      if (data) setFullName(data.full_name);
+    supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      if (data?.full_name) setFullName(data.full_name);
     });
 
     supabase.from("articles").select("status, views").eq("author_id", user.id).then(({ data }) => {
@@ -37,7 +37,9 @@ const ProfilePage = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("user_id", user.id);
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ user_id: user.id, full_name: fullName.trim() }, { onConflict: "user_id" });
     setSaving(false);
     if (error) toast({ title: "त्रुटि", description: error.message, variant: "destructive" });
     else toast({ title: "प्रोफ़ाइल अपडेट हुई" });
