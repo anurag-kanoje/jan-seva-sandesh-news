@@ -58,9 +58,22 @@ const ProfilePage = () => {
     else toast({ title: "प्रोफ़ाइल अपडेट हुई" });
   };
 
+  const submitApplication = async () => {
+    if (!user || appReason.trim().length < 20) {
+      toast({ title: "कृपया कम से कम 20 अक्षर का कारण लिखें", variant: "destructive" });
+      return;
+    }
+    setSubmittingApp(true);
+    const { error } = await supabase.from("writer_applications" as any).insert({ user_id: user.id, reason: appReason.trim() });
+    setSubmittingApp(false);
+    if (error) toast({ title: "त्रुटि", description: error.message, variant: "destructive" });
+    else { toast({ title: "आवेदन जमा हो गया", description: "एडमिन की समीक्षा का इंतज़ार करें।" }); setAppReason(""); fetchApplication(); }
+  };
+
   const dashboardType: "admin" | "writer" | "user" =
     role === "admin" ? "admin" : role === "writer" ? "writer" : "user";
   const showWriterStats = role === "admin" || role === "writer";
+  const canApply = role === "user" || role === null;
 
   return (
     <DashboardLayout type={dashboardType}>
