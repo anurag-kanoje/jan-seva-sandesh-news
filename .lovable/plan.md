@@ -1,87 +1,45 @@
-## Goal
-Skip email verification (auto-confirm signups) and ship the next batch of production features: correct sitemap/robots, an admin moderation queue, polished category and author pages, and an upgraded writer/admin article editor.
+# Goal
+Make the site fully usable end-to-end: fix the blank page that appears after login, ensure every new signup gets a profile + default role, repair article joins so the homepage and category pages render, and polish the homepage news feed (category chips, featured story, pagination) so the site is publish-ready.
 
-## 1. Disable email verification (skip-for-now mode)
-- Configure Lovable Cloud auth to auto-confirm new signups so users can sign in immediately after signing up. No verification email is required.
-- Update Signup page:
-  - Remove the "verification pending" UI and resend button.
-  - On success, show "खाता बन गया, अब लॉगिन करें" and redirect to `/login` (or auto-redirect to `/dashboard` when a session is returned).
-- Update Login page:
-  - Remove "unverified email" handling and "resend verification" prompts.
-  - Keep forgot password link and clean Hindi error messages.
-- Keep `useAuth.signUp` returning `{ error, needsVerification }`, but `needsVerification` will effectively always be false now.
-- Note: forgot/reset password still uses email. That is a separate flow and not affected by disabling signup verification.
+## Root causes found
+1. **No DB triggers exist.** Despite earlier migrations, `handle_new_user` is not attached to `auth.users`, so signups never create a `profiles` row or a default `user_roles` row. Result: `useAuth` falls back to role `"user"`, `/dashboard` redirects to `/profile`, and `ProfilePage` calls `.single()` on a non-existent profile → silent crash → blank page.
+2. **No foreign keys** on `articles.author_id` / `articles.category_id`. The PostgREST embed `profiles:author_id(full_name), categories:category_id(name)` returns `null` (or errors on some clients), making the homepage feed look empty.
+3. Homepage already has chips + pagination, but lacks a real "featured story" treatment and graceful empty states; trending sidebar links use slug fallback that can 404.
 
-## 2. Fix sitemap and robots for production
-- `public/robots.txt`:
-  - Set `Sitemap:` to `https://jss-news-foundation.lovable.app/sitemap.xml`.
-  - Allow all, disallow `/admin`, `/writer`, `/dashboard`, `/profile`, `/login`, `/signup`, `/forgot-password`, `/reset-password`.
-- `supabase/functions/sitemap/index.ts`:
-  - Default `siteUrl` to `https://jss-news-foundation.lovable.app` (overridable via `SITE_URL` secret if ever needed).
-  - Include: `/`, all category pages, all approved articles, all writer/admin author pages.
-  - Use proper `<lastmod>` ISO dates.
-  - Add a homepage entry plus a static `/search` entry.
-- Add a thin Vite redirect or short note: the public sitemap path should be `https://jss-news-foundation.lovable.app/sitemap.xml`. Since hosting can't proxy to the function, robots.txt will instead point directly to the deployed function URL `https://qltedcfuztowideidlrh.supabase.co/functions/v1/sitemap` AND we will also expose a static `public/sitemap.xml` placeholder pointing crawlers to the live function.
-  - Final approach: `robots.txt` points to the function URL (already crawlable), and the sitemap function emits absolute production URLs.
+## Changes
 
-## 3. Admin moderation queue upgrade
-Upgrade `src/pages/admin/AdminArticles.tsx`:
-- Server-side search by title (`ilike`).
-- Filters: status (all/pending/approved/rejected) and category (dropdown from categories table).
-- Pagination (10/page) using `range()` + `count: 'exact'`.
-- Bulk selection with checkboxes; bulk Approve/Reject/Delete actions.
-- Keep individual row actions: view, approve, reject, delete.
-- Author and category names rendered safely; clickable author link to `/author/:id`.
-- Default landing tab: `pending` so moderators see the queue first.
-- Loading skeletons and empty state in Hindi.
+### 1. Database migration (fixes login + feed)
+- Re-create trigger `on_auth_user_created` on `auth.users` → `public.handle_new_user()`.
+- Extend `handle_new_user` to also insert a default `('user')` row into `user_roles` (ON CONFLICT DO NOTHING).
+- Backfill: insert missing profiles and missing default `user` roles for every existing `auth.users` id.
+- Add foreign keys:
+  - `articles.author_id` → `profiles.user_id` (so `profiles:author_id(...)` embed works).
+  - `articles.category_id` → `categories.id`.
+- Add helpful indexes: `articles(status, created_at desc)`, `articles(category_id)`, `articles(author_id)`, `articles(slug)`.
 
-## 4. Category listing pages
-`src/pages/CategoryPage.tsx` already filters approved articles and paginates. Enhancements:
-- Dynamic SEO title/description per category via `SEOHead` (canonical URL, OpenGraph).
-- JSON-LD `CollectionPage` schema listing the page's article URLs.
-- Breadcrumb links: Home › श्रेणी › {category name}.
-- Internal cross-links to other categories at the bottom (chip row).
-- Show "0 लेख" empty state with link back to homepage.
+### 2. Auth + routing hardening
+- `ProfilePage`: switch `.single()` → `.maybeSingle()`, render even when the profile row is missing, and create one on first save.
+- `useAuth`: keep current pattern; ensure `roleLoading` is always resolved (already OK) and that `signOut` redirects to `/`.
+- `Dashboard`: if `role` is null after load, send to `/profile` instead of `/login` so the user is never stuck.
+- Add an `ErrorBoundary` fallback message in Hindi instead of a blank screen.
 
-## 5. Author pages
-`src/pages/AuthorPage.tsx` enhancements:
-- Author bio block at top: avatar (fallback icon), full name, bio text, and small stat row (total approved articles).
-- Pull `bio`, `avatar_url` from `profiles` table (add columns via migration).
-- Dynamic SEO: title `{name} - लेखक - जन सेवा संदेश`, description from bio, canonical URL, OG tags.
-- JSON-LD `Person` schema with `name`, `url`, `image`, plus a `CollectionPage` of articles.
-- Breadcrumbs: Home › लेखक › {name}.
-- Link author name from article cards to this page (already partly wired).
+### 3. Homepage news feed polish (`src/pages/Index.tsx`)
+- Query approved articles with the now-working FK embed; show a real **Featured Story** (first article rendered large with overlay) + 6 secondary cards in a responsive grid.
+- **Category chips** row already exists — make active category highlight and link directly to `/category/:id`.
+- **Pagination** kept (10/page) with proper `totalPages` and disabled states; reset to page 1 when filters change.
+- Empty/loading states with skeletons (already partially in place) and a clear "कोई समाचार नहीं" message.
+- Trending sidebar: prefer `slug` only when present, otherwise `id`; add view counts.
 
-## 6. Writer/Admin article editor upgrade
-Upgrade `src/pages/writer/ArticleForm.tsx`:
-- Live slug preview shown under title; editable for admins, read-only for writers.
-- Autosave to localStorage (key per draft id or `new`) every few seconds; restore on reopen with a "Draft restored" toast and a "Discard draft" button.
-- Unsaved changes guard via `beforeunload` and route navigation prompt.
-- Dirty tracking to enable/disable Save button.
-- Improved `ImageUpload` UX:
-  - Real upload progress (use XHR-style progress where possible; fallback to staged progress).
-  - Clear error states for type/size/network errors.
-  - Replace/remove buttons; show file name and size.
-- Validation messages inline (not just toast) and required-field highlighting.
-- After save: clear localStorage draft.
+### 4. Production-readiness checks (no behavior change unless broken)
+- Verify `sitemap` edge function still builds with the new FKs.
+- Confirm `robots.txt` points to production URL.
+- Confirm category, author, article pages load for an anonymous visitor.
 
-## 7. Database changes
-Migration to:
-- Add `bio text default ''`, `avatar_url text`, `social_links jsonb default '{}'::jsonb` to `profiles`.
-- Restore the `on_auth_user_created` trigger calling `handle_new_user()` so every signup still gets a profile row even with auto-confirm.
-- Backfill missing profiles for any existing auth users.
+## Technical details
+- Files touched: `src/pages/Index.tsx`, `src/pages/ProfilePage.tsx`, `src/pages/Dashboard.tsx`, `src/components/ErrorBoundary.tsx`, plus one new SQL migration.
+- No changes to `src/integrations/supabase/client.ts` or `types.ts` (regenerated automatically after the migration).
+- Email verification stays disabled (auto-confirm), per previous decision.
 
-No FK changes attempted in this batch (the public listings already join via embedded selects and work).
-
-## 8. Files touched
-- `src/pages/Signup.tsx`, `src/pages/Login.tsx`, `src/hooks/useAuth.tsx`
-- `public/robots.txt`, `supabase/functions/sitemap/index.ts`
-- `src/pages/admin/AdminArticles.tsx`
-- `src/pages/CategoryPage.tsx`, `src/pages/AuthorPage.tsx`
-- `src/pages/writer/ArticleForm.tsx`, `src/components/ImageUpload.tsx`
-- New: `src/components/Breadcrumbs.tsx`, `src/hooks/useAutosave.ts`
-- New migration for profile columns + trigger restore
-
-## What you do not need to do
-- No DNS, no email setup. Verification is disabled.
-- Lovable Cloud auth setting will be flipped automatically.
+## Out of scope
+- Custom email domain / branded templates.
+- New monetization features beyond the existing `AdSlot` component.
