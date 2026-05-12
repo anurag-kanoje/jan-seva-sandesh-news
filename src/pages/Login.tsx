@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import PasswordField from "@/components/PasswordField";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 import logo from "@/assets/logo.jpg";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,6 +48,13 @@ const Login = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    const { error } = await signInWithGoogle();
+    setIsLoading(false);
+    if (error) toast({ title: "Google लॉगिन विफल", description: error, variant: "destructive" });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -68,6 +77,12 @@ const Login = () => {
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "लॉगिन हो रहा है..." : "लॉगिन"}
+            </Button>
+            <div className="flex items-center gap-3 w-full text-xs text-muted-foreground">
+              <Separator className="flex-1" /> या <Separator className="flex-1" />
+            </div>
+            <Button type="button" variant="outline" className="w-full" disabled={isLoading} onClick={handleGoogleLogin}>
+              <Chrome className="w-4 h-4" /> Google से लॉगिन
             </Button>
             <Link to="/forgot-password" className="text-sm text-accent hover:underline">पासवर्ड भूल गए?</Link>
             <p className="text-sm text-muted-foreground">
