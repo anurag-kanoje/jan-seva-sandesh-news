@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import type { User } from "@supabase/supabase-js";
 
 type AppRole = "admin" | "writer" | "user" | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification: boolean }>;
   resendVerification: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -22,6 +24,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(true);
+
+  const resetAuthState = async () => {
+    await supabase.auth.signOut({ scope: "local" });
+    setUser(null);
+    setRole(null);
+    setRoleLoading(false);
+    setLoading(false);
+  };
 
   const fetchRole = async (userId: string) => {
     setRoleLoading(true);
@@ -57,7 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        await resetAuthState();
+        return;
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -66,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRoleLoading(false);
         setLoading(false);
       }
-    });
+    }).catch(resetAuthState);
 
     return () => subscription.unsubscribe();
   }, []);
@@ -80,6 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return { error: error.message };
     }
+    return { error: null };
+  };
+
+  const signInWithGoogle = async () => {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}/dashboard`,
+    });
+
+    if (result.error) {
+      return { error: "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
+    }
+
     return { error: null };
   };
 
@@ -106,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error.message, needsVerification: false };
     }
 
-    const needsVerification = !!(data.user && !data.user.email_confirmed_at);
+    const needsVerification = !!(data.user && !data.user.email_confirmed_at && !data.session);
     return { error: null, needsVerification };
   };
 
@@ -128,13 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setRole(null);
-    setRoleLoading(false);
+    await resetAuthState();
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, roleLoading, signIn, signUp, resendVerification, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, roleLoading, signIn, signInWithGoogle, signUp, resendVerification, signOut }}>
       {children}
     </AuthContext.Provider>
   );
