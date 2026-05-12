@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import AdSlot from "@/components/AdSlot";
 import ArticleCardPublic from "@/components/ArticleCardPublic";
+import ShareActions from "@/components/ShareActions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Eye, User, ArrowLeft } from "lucide-react";
@@ -110,6 +111,7 @@ const ArticlePage = () => {
   }
 
   const dateStr = new Date(article.created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "long", year: "numeric" });
+  const articleUrl = typeof window !== "undefined" ? window.location.href : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,6 +160,10 @@ const ArticlePage = () => {
           <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{dateStr}</span>
           <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{article.views} व्यू</span>
         </div>
+
+        <ShareActions title={article.title} url={articleUrl} />
+
+        <AdSlot slot="article-top" className="my-6" height="h-24" />
 
         {article.image_url && (
           <img src={article.image_url} alt={article.title} className="w-full rounded-lg mb-6 max-h-[500px] object-cover" loading="lazy" />

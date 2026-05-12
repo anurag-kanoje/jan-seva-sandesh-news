@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
+import AdSlot from "@/components/AdSlot";
 import ArticleCardPublic, { ArticleCardSkeleton } from "@/components/ArticleCardPublic";
 import Pagination from "@/components/Pagination";
 import NGOSection from "@/components/NGOSection";
@@ -101,6 +102,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <h2 className="section-title font-hindi">ताज़ा समाचार</h2>
+              <AdSlot slot="home-feed-top" className="mb-6" height="h-24" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {loading
                   ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)
@@ -136,6 +138,7 @@ const Index = () => {
                 ))}
                 {trending.length === 0 && <p className="text-sm text-muted-foreground">कोई ट्रेंडिंग नहीं</p>}
               </div>
+              <AdSlot slot="home-sidebar" className="mt-6" height="h-40" />
             </aside>
           </div>
         </div>
