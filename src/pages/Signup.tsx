@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import PasswordField from "@/components/PasswordField";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 import logo from "@/assets/logo.jpg";
 
 const Signup = () => {
@@ -14,7 +16,7 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp, signIn, user } = useAuth();
+  const { signUp, signIn, signInWithGoogle, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -57,6 +59,13 @@ const Signup = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    const { error } = await signInWithGoogle();
+    setIsLoading(false);
+    if (error) toast({ title: "Google साइन अप विफल", description: error, variant: "destructive" });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -92,6 +101,12 @@ const Signup = () => {
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "खाता बना रहे हैं..." : "साइन अप"}
+            </Button>
+            <div className="flex items-center gap-3 w-full text-xs text-muted-foreground">
+              <Separator className="flex-1" /> या <Separator className="flex-1" />
+            </div>
+            <Button type="button" variant="outline" className="w-full" disabled={isLoading} onClick={handleGoogleLogin}>
+              <Chrome className="w-4 h-4" /> Google से जारी रखें
             </Button>
             <p className="text-sm text-muted-foreground">
               पहले से खाता है?{" "}
