@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      ads: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          html: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          priority: number
+          slot: string
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          html?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          priority?: number
+          slot: string
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          html?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          priority?: number
+          slot?: string
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           author_id: string
