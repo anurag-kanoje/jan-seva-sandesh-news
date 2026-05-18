@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Users, FolderOpen, BarChart3, LogOut, Home, PenLine, User } from "lucide-react";
+import { LayoutDashboard, FileText, Users, FolderOpen, BarChart3, LogOut, Home, PenLine, User, Megaphone } from "lucide-react";
 import logo from "@/assets/logo.jpg";
 
 const adminLinks = [
@@ -10,6 +10,7 @@ const adminLinks = [
   { to: "/admin/articles", icon: FileText, label: "लेख प्रबंधन" },
   { to: "/admin/users", icon: Users, label: "उपयोगकर्ता" },
   { to: "/admin/categories", icon: FolderOpen, label: "श्रेणियां" },
+  { to: "/admin/ads", icon: Megaphone, label: "विज्ञापन" },
   { to: "/admin/stats", icon: BarChart3, label: "आंकड़े" },
 ];
 
