@@ -28,6 +28,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminWriters from "./pages/admin/AdminWriters";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminStats from "./pages/admin/AdminStats";
+import AdminAds from "./pages/admin/AdminAds";
 import ProductionChecklist from "./pages/admin/ProductionChecklist";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/admin/writers" element={<ProtectedRoute allowedRoles={["admin"]}><AdminWriters /></ProtectedRoute>} />
                 <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={["admin"]}><AdminCategories /></ProtectedRoute>} />
                 <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStats /></ProtectedRoute>} />
+                <Route path="/admin/ads" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAds /></ProtectedRoute>} />
                 <Route path="/admin/production-checklist" element={<ProtectedRoute allowedRoles={["admin"]}><ProductionChecklist /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
