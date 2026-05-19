@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -85,7 +85,7 @@ const ArticleForm = () => {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty, saving]);
 
-  const slugPreview = useMemo(() => generateSlug(title) || "...", [title]);
+  // Slug is now generated on submit by AI translation; no live preview.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
