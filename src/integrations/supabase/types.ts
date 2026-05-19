@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_events: {
+        Row: {
+          ad_id: string
+          created_at: string
+          event_type: string
+          id: string
+          slot: string
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          slot: string
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          slot?: string
+        }
+        Relationships: []
+      }
       ads: {
         Row: {
           active: boolean
@@ -241,6 +265,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_ad_stats: {
+        Args: never
+        Returns: {
+          ad_id: string
+          clicks: number
+          impressions: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
