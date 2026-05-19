@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { Facebook, Link2, MessageCircle, Share2, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -8,9 +9,25 @@ interface ShareActionsProps {
   url?: string;
 }
 
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
-  const shareUrl = url || (typeof window !== "undefined" ? window.location.href : "");
+  const location = useLocation();
+
+  // Extract slug from current path (clean URL like /my-slug)
+  const slug = (url ? new URL(url).pathname : location.pathname).replace(/^\/+/, "").split("/")[0];
+
+  // Prerendered share URL — returns HTML with OG tags for crawlers,
+  // then redirects browsers to the real article page.
+  const shareUrl = useMemo(() => {
+    if (PROJECT_ID && slug) {
+      return `https://${PROJECT_ID}.supabase.co/functions/v1/share/${slug}`;
+    }
+    return url || (typeof window !== "undefined" ? window.location.href : "");
+  }, [slug, url]);
+
+  const directUrl = url || (typeof window !== "undefined" ? window.location.href : "");
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
 
@@ -28,7 +45,7 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
       await navigator.share({ title, url: shareUrl });
       return;
     }
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(directUrl);
     toast({ title: "लिंक कॉपी हुआ" });
   };
 
