@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     ),
     ...(articles ?? []).map(
       (a) =>
-        `<url><loc>${SITE_URL}/article/${a.slug}</loc><lastmod>${a.updated_at}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+        `<url><loc>${SITE_URL}/${a.slug}</loc><lastmod>${a.updated_at}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`
     ),
   ];
 

@@ -21,7 +21,7 @@ const ArticleCardPublic = ({
   id, title, excerpt, image_url, category_name, author_name, author_id, slug, created_at, views, isLarge = false,
 }: ArticleCardPublicProps) => {
   const timeAgo = new Date(created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "short", year: "numeric" });
-  const articleUrl = slug ? `/article/${slug}` : `/article/${id}`;
+  const articleUrl = slug ? `/${slug}` : `/${id}`;
 
   return (
     <Link to={articleUrl} className={`news-card group ${isLarge ? "md:col-span-2" : ""}`}>
