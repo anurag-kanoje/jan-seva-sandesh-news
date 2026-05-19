@@ -82,7 +82,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch(resetAuthState);
 
-    return () => subscription.unsubscribe();
+    // Cross-tab session sync — listen for storage changes (signin/signout in other tabs)
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      if (e.key.includes("supabase.auth.token") || e.key.includes("-auth-token")) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const u = session?.user ?? null;
+          setUser(u);
+          if (u) fetchRole(u.id);
+          else {
+            setRole(null);
+            setRoleLoading(false);
+          }
+        });
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

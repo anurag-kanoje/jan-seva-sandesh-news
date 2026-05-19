@@ -1,1 +1,10 @@
 project_id = "qltedcfuztowideidlrh"
+
+[functions.share]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.generate-slug]
+verify_jwt = false

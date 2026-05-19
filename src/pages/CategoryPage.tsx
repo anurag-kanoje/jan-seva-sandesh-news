@@ -67,7 +67,7 @@ const CategoryPage = () => {
       hasPart: articles.map((a) => ({
         "@type": "NewsArticle",
         headline: a.title,
-        url: `${SITE_URL}/article/${a.slug || a.id}`,
+        url: `${SITE_URL}/${a.slug || a.id}`,
       })),
     }),
     [articles, categoryName, canonical]

@@ -203,7 +203,7 @@ const AdminArticles = () => {
                     <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString("hi-IN")}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Link to={`/article/${a.slug || a.id}`} target="_blank">
+                        <Link to={`/${a.slug || a.id}`} target="_blank">
                           <Button variant="ghost" size="icon" title="देखें"><ExternalLink className="w-4 h-4" /></Button>
                         </Link>
                         {a.status !== "approved" && (

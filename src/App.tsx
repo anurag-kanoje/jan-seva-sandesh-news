@@ -9,6 +9,24 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { Navigate, useParams } from "react-router-dom";
+
+const RESERVED = new Set([
+  "article", "category", "author", "search", "login", "signup",
+  "forgot-password", "reset-password", "dashboard", "writer", "admin",
+  "profile", "sitemap.xml", "robots.txt", "favicon.ico",
+]);
+
+const SlugRouter = () => {
+  const { slug } = useParams<{ slug: string }>();
+  if (!slug || RESERVED.has(slug)) return <NotFound />;
+  return <ArticlePage />;
+};
+
+const LegacyArticleRedirect = () => {
+  const { slug } = useParams<{ slug: string }>();
+  return <Navigate to={`/${slug}`} replace />;
+};
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -45,7 +63,7 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
-                <Route path="/article/:slug" element={<ArticlePage />} />
+                <Route path="/article/:slug" element={<LegacyArticleRedirect />} />
                 <Route path="/category/:id" element={<CategoryPage />} />
                 <Route path="/author/:id" element={<AuthorPage />} />
                 <Route path="/search" element={<SearchPage />} />
@@ -72,6 +90,8 @@ const App = () => (
                 <Route path="/admin/ads" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAds /></ProtectedRoute>} />
                 <Route path="/admin/production-checklist" element={<ProtectedRoute allowedRoles={["admin"]}><ProductionChecklist /></ProtectedRoute>} />
 
+                {/* Clean article URLs: /<slug> */}
+                <Route path="/:slug" element={<SlugRouter />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

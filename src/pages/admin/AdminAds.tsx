@@ -56,18 +56,24 @@ const AdminAds = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [ads, setAds] = useState<Ad[]>([]);
+  const [stats, setStats] = useState<Record<string, { impressions: number; clicks: number }>>({});
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ads")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data, error }, { data: statsData }] = await Promise.all([
+      supabase.from("ads").select("*").order("created_at", { ascending: false }),
+      supabase.rpc("get_ad_stats"),
+    ]);
     if (error) toast({ title: "लोड विफल", description: error.message, variant: "destructive" });
     setAds((data as Ad[]) ?? []);
+    const map: Record<string, { impressions: number; clicks: number }> = {};
+    (statsData as any[] | null)?.forEach((s) => {
+      map[s.ad_id] = { impressions: Number(s.impressions), clicks: Number(s.clicks) };
+    });
+    setStats(map);
     setLoading(false);
   };
 
@@ -284,6 +290,19 @@ const AdminAds = () => {
                         {a.starts_at && ` • प्रारंभ ${new Date(a.starts_at).toLocaleString("hi-IN")}`}
                         {a.ends_at && ` • समाप्ति ${new Date(a.ends_at).toLocaleString("hi-IN")}`}
                       </p>
+                      <div className="flex gap-3 mt-2 text-xs">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted">
+                          👁 {stats[a.id]?.impressions ?? 0} इम्प्रेशन
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted">
+                          🖱 {stats[a.id]?.clicks ?? 0} क्लिक
+                        </span>
+                        {stats[a.id]?.impressions ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted">
+                            CTR {((stats[a.id].clicks / stats[a.id].impressions) * 100).toFixed(1)}%
+                          </span>
+                        ) : null}
+                      </div>
                       {a.link_url && (
                         <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent inline-flex items-center gap-1 mt-1">
                           {a.link_url} <ExternalLink className="w-3 h-3" />
