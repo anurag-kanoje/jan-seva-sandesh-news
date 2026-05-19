@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUpload from "@/components/ImageUpload";
-import { generateSlug, generateUniqueSlug } from "@/lib/slug";
+import { generateSlug } from "@/lib/slug";
 import { canSubmitArticle } from "@/lib/rate-limit";
 import { useAutosave, loadDraft, clearDraft } from "@/hooks/useAutosave";
 
@@ -116,7 +116,16 @@ const ArticleForm = () => {
     };
 
     if (!isEditing) {
-      articleData.slug = generateUniqueSlug(title);
+      // Generate clean English slug via AI translation of (Hindi) title
+      try {
+        const { data: slugData, error: slugErr } = await supabase.functions.invoke("generate-slug", {
+          body: { title: title.trim() },
+        });
+        if (slugErr) throw slugErr;
+        articleData.slug = slugData?.slug || generateSlug(title) || `news-${Date.now()}`;
+      } catch {
+        articleData.slug = `${generateSlug(title) || "news"}-${Math.random().toString(36).slice(2, 6)}`;
+      }
       articleData.status = "pending";
       articleData.views = 0;
     }
@@ -153,7 +162,7 @@ const ArticleForm = () => {
           <div className="space-y-2">
             <Label htmlFor="title">शीर्षक * (कम से कम 5 अक्षर)</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} />
-            <p className="text-xs text-muted-foreground">URL: /article/<span className="font-mono">{slugPreview}</span></p>
+            <p className="text-xs text-muted-foreground">URL slug स्वचालित रूप से शीर्षक से अंग्रेज़ी में बनेगा (जैसे: rte-school-row)।</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">सारांश</Label>
