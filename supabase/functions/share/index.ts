@@ -1,0 +1,69 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SITE_URL = Deno.env.get("SITE_URL") || "https://jss-news-foundation.lovable.app";
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+  // path: /share/<slug> OR /functions/v1/share/<slug>
+  const parts = url.pathname.split("/").filter(Boolean);
+  const slug = parts[parts.length - 1];
+
+  if (!slug || slug === "share") {
+    return Response.redirect(SITE_URL, 302);
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const { data: article } = await supabase
+    .from("articles")
+    .select("title, excerpt, image_url, created_at, slug, status")
+    .eq("slug", slug)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  const target = `${SITE_URL}/${slug}`;
+  const title = article?.title || "जन सेवा संदेश";
+  const desc = (article?.excerpt || "जन सेवा संदेश - सच्चाई की आवाज़").slice(0, 200);
+  const img = article?.image_url || "";
+
+  const html = `<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}" />
+<link rel="canonical" href="${target}" />
+<meta property="og:site_name" content="जन सेवा संदेश" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="${esc(title)}" />
+<meta property="og:description" content="${esc(desc)}" />
+<meta property="og:url" content="${target}" />
+${img ? `<meta property="og:image" content="${esc(img)}" />` : ""}
+<meta property="og:locale" content="hi_IN" />
+<meta name="twitter:card" content="${img ? "summary_large_image" : "summary"}" />
+<meta name="twitter:title" content="${esc(title)}" />
+<meta name="twitter:description" content="${esc(desc)}" />
+${img ? `<meta name="twitter:image" content="${esc(img)}" />` : ""}
+<meta http-equiv="refresh" content="0; url=${target}" />
+<script>window.location.replace(${JSON.stringify(target)});</script>
+</head>
+<body>
+<p>Redirecting to <a href="${target}">${esc(title)}</a>...</p>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+});
