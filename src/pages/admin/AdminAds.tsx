@@ -56,18 +56,24 @@ const AdminAds = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [ads, setAds] = useState<Ad[]>([]);
+  const [stats, setStats] = useState<Record<string, { impressions: number; clicks: number }>>({});
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ads")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data, error }, { data: statsData }] = await Promise.all([
+      supabase.from("ads").select("*").order("created_at", { ascending: false }),
+      supabase.rpc("get_ad_stats"),
+    ]);
     if (error) toast({ title: "लोड विफल", description: error.message, variant: "destructive" });
     setAds((data as Ad[]) ?? []);
+    const map: Record<string, { impressions: number; clicks: number }> = {};
+    (statsData as any[] | null)?.forEach((s) => {
+      map[s.ad_id] = { impressions: Number(s.impressions), clicks: Number(s.clicks) };
+    });
+    setStats(map);
     setLoading(false);
   };
 
