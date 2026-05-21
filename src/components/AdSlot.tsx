@@ -25,19 +25,24 @@ const AdSlot = ({ slot, className, label = "विज्ञापन", height = 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const nowIso = new Date().toISOString();
-      const { data } = await supabase
-        .from("ads")
-        .select("id, title, image_url, link_url, html")
-        .eq("slot", slot)
-        .eq("active", true)
-        .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
-        .or(`ends_at.is.null,ends_at.gte.${nowIso}`)
-        .order("priority", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (!mounted || !data || data.length === 0) return;
-      setAd(data[Math.floor(Math.random() * data.length)] as Ad);
+      try {
+        const nowIso = new Date().toISOString();
+        const { data, error } = await supabase
+          .from("ads")
+          .select("id, title, image_url, link_url, html")
+          .eq("slot", slot)
+          .eq("active", true)
+          .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+          .or(`ends_at.is.null,ends_at.gte.${nowIso}`)
+          .order("priority", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        if (!mounted || !data || data.length === 0) return;
+        setAd(data[Math.floor(Math.random() * data.length)] as Ad);
+      } catch (e) {
+        console.warn(`AdSlot[${slot}] fetch failed`, e);
+      }
     })();
     return () => {
       mounted = false;
