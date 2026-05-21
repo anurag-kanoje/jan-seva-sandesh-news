@@ -183,7 +183,11 @@ const ArticleForm = () => {
           <div className="space-y-2">
             <Label htmlFor="title">शीर्षक * (कम से कम 5 अक्षर)</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} />
-            <p className="text-xs text-muted-foreground">URL slug स्वचालित रूप से शीर्षक से अंग्रेज़ी में बनेगा (जैसे: rte-school-row)।</p>
+            {isEditing && existingSlug ? (
+              <p className="text-xs text-muted-foreground">URL: <code className="px-1 bg-muted rounded">/{existingSlug}</code> (स्थायी)</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">URL slug स्वचालित रूप से शीर्षक से अंग्रेज़ी में बनेगा (जैसे: rte-school-row)।</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">सारांश</Label>
