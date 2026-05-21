@@ -33,6 +33,7 @@ const ArticleForm = () => {
   const [excerpt, setExcerpt] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [existingSlug, setExistingSlug] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -53,6 +54,7 @@ const ArticleForm = () => {
           setExcerpt(data.excerpt ?? "");
           setCategoryId(data.category_id ?? "");
           setImageUrl(data.image_url ?? "");
+          setExistingSlug(data.slug ?? null);
         }
       }
       const draft = loadDraft<Draft>(draftKey);
@@ -115,17 +117,36 @@ const ArticleForm = () => {
       author_id: user.id,
     };
 
-    if (!isEditing) {
-      // Generate clean English slug via AI translation of (Hindi) title
+    // Slug rules:
+    // - On create: always generate.
+    // - On edit: NEVER change the slug if it already exists. Only fill in for legacy rows missing one.
+    const needsSlug = !isEditing || !existingSlug;
+    if (needsSlug) {
+      let slug = "";
       try {
         const { data: slugData, error: slugErr } = await supabase.functions.invoke("generate-slug", {
           body: { title: title.trim() },
         });
         if (slugErr) throw slugErr;
-        articleData.slug = slugData?.slug || generateSlug(title) || `news-${Date.now()}`;
+        slug = slugData?.slug || "";
       } catch {
-        articleData.slug = `${generateSlug(title) || "news"}-${Math.random().toString(36).slice(2, 6)}`;
+        slug = "";
       }
+      if (!slug) slug = `${generateSlug(title) || "news"}-${Math.random().toString(36).slice(2, 6)}`;
+
+      // Client-side uniqueness re-check (race-safe fallback)
+      const { data: dup } = await supabase
+        .from("articles")
+        .select("id")
+        .eq("slug", slug)
+        .neq("id", id ?? "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+      if (dup) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+
+      articleData.slug = slug;
+    }
+
+    if (!isEditing) {
       articleData.status = "pending";
       articleData.views = 0;
     }
