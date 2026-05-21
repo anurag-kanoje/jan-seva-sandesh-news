@@ -161,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return { error: error.message };
     }
+    broadcast("SIGNED_IN");
     return { error: null };
   };
 
@@ -173,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
     }
 
+    broadcast("SIGNED_IN");
     return { error: null };
   };
 
@@ -222,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     await resetAuthState();
+    broadcast("SIGNED_OUT");
   };
 
   return (
