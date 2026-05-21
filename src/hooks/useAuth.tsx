@@ -50,13 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Helper that re-syncs from whatever session is now in storage.
+    const syncFromStorage = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) fetchRole(u.id);
+        else {
+          setRole(null);
+          setRoleLoading(false);
+        }
+      });
+    };
+
     // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          // Use setTimeout to avoid potential deadlock with Supabase internals
+          // Defer to avoid potential deadlock with Supabase internals
           setTimeout(() => fetchRole(currentUser.id), 0);
         } else {
           setRole(null);
@@ -82,28 +95,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch(resetAuthState);
 
-    // Cross-tab session sync — listen for storage changes (signin/signout in other tabs)
+    // Cross-tab sync via storage events. Supabase v2 storage key is `sb-<ref>-auth-token`.
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
-      if (e.key.includes("supabase.auth.token") || e.key.includes("-auth-token")) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          const u = session?.user ?? null;
-          setUser(u);
-          if (u) fetchRole(u.id);
-          else {
-            setRole(null);
-            setRoleLoading(false);
-          }
-        });
+      if (e.key.startsWith("sb-") && e.key.endsWith("-auth-token")) {
+        if (e.newValue === null) {
+          // Logout in another tab
+          setUser(null);
+          setRole(null);
+          setRoleLoading(false);
+          setLoading(false);
+        } else {
+          syncFromStorage();
+        }
       }
     };
     window.addEventListener("storage", onStorage);
 
+    // Cross-tab sync via BroadcastChannel (works even in same-origin tabs where storage events skip the sender)
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel("jss-auth");
+      channel.onmessage = (msg) => {
+        if (msg?.data?.type === "SIGNED_OUT") {
+          setUser(null);
+          setRole(null);
+          setRoleLoading(false);
+          setLoading(false);
+        } else if (msg?.data?.type === "SIGNED_IN") {
+          syncFromStorage();
+        }
+      };
+    } catch {
+      // BroadcastChannel unsupported — storage listener is enough.
+    }
+
+    // Refresh when tab regains focus (catches background logout)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") syncFromStorage();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Expose broadcaster on window for the auth methods below
+    (window as any).__jssAuthChannel = channel;
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisibility);
+      try { channel?.close(); } catch { /* noop */ }
+      (window as any).__jssAuthChannel = null;
     };
   }, []);
+
+  const broadcast = (type: "SIGNED_IN" | "SIGNED_OUT") => {
+    try { (window as any).__jssAuthChannel?.postMessage({ type }); } catch { /* noop */ }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -114,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return { error: error.message };
     }
+    broadcast("SIGNED_IN");
     return { error: null };
   };
 
@@ -126,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
     }
 
+    broadcast("SIGNED_IN");
     return { error: null };
   };
 
@@ -175,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     await resetAuthState();
+    broadcast("SIGNED_OUT");
   };
 
   return (

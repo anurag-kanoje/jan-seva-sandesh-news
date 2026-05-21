@@ -7,6 +7,7 @@ import SEOHead from "@/components/SEOHead";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ArticleCardPublic, { ArticleCardSkeleton } from "@/components/ArticleCardPublic";
 import Pagination from "@/components/Pagination";
+import AdSlot from "@/components/AdSlot";
 import { Badge } from "@/components/ui/badge";
 
 const PER_PAGE = 10;
@@ -85,6 +86,7 @@ const CategoryPage = () => {
       <main className="container py-8">
         <Breadcrumbs items={[{ label: "होम", to: "/" }, { label: "श्रेणी" }, { label: categoryName || "..." }]} />
         <h1 className="section-title font-hindi">{categoryName || "श्रेणी"}</h1>
+        <AdSlot slot="category-top" className="mb-6" height="h-24" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)

@@ -102,7 +102,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <h2 className="section-title font-hindi">ताज़ा समाचार</h2>
-              <AdSlot slot="home-feed-top" className="mb-6" height="h-24" />
+              <AdSlot slot="home-top" className="mb-6" height="h-24" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {loading
                   ? Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)

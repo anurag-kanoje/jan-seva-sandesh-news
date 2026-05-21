@@ -13,15 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import ImageUpload from "@/components/ImageUpload";
 import { Pencil, Trash2, Plus, ExternalLink } from "lucide-react";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
-const SLOTS = [
-  { value: "home-top", label: "होम पेज - ऊपर" },
-  { value: "home-mid", label: "होम पेज - बीच में" },
-  { value: "home-sidebar", label: "होम पेज - साइडबार" },
-  { value: "article-top", label: "लेख - ऊपर" },
-  { value: "article-bottom", label: "लेख - नीचे" },
-  { value: "category-top", label: "श्रेणी पेज - ऊपर" },
-];
+const SLOTS = AD_SLOTS;
 
 interface Ad {
   id: string;
@@ -53,7 +47,7 @@ const empty = {
 const toLocalInput = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
 
 const AdminAds = () => {
-  const { user } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [ads, setAds] = useState<Ad[]>([]);
   const [stats, setStats] = useState<Record<string, { impressions: number; clicks: number }>>({});
@@ -63,23 +57,41 @@ const AdminAds = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data, error }, { data: statsData }] = await Promise.all([
-      supabase.from("ads").select("*").order("created_at", { ascending: false }),
-      supabase.rpc("get_ad_stats"),
-    ]);
-    if (error) toast({ title: "लोड विफल", description: error.message, variant: "destructive" });
-    setAds((data as Ad[]) ?? []);
-    const map: Record<string, { impressions: number; clicks: number }> = {};
-    (statsData as any[] | null)?.forEach((s) => {
-      map[s.ad_id] = { impressions: Number(s.impressions), clicks: Number(s.clicks) };
-    });
-    setStats(map);
+    // Load ads first — this must succeed for the page to be useful.
+    try {
+      const { data, error } = await supabase
+        .from("ads")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setAds((data as Ad[]) ?? []);
+    } catch (e: any) {
+      toast({ title: "विज्ञापन लोड विफल", description: e?.message ?? "नेटवर्क त्रुटि", variant: "destructive" });
+      setAds([]);
+    }
+    // Stats are best-effort — never break the page if they fail.
+    try {
+      const { data: statsData, error } = await supabase.rpc("get_ad_stats");
+      if (error) throw error;
+      const map: Record<string, { impressions: number; clicks: number }> = {};
+      (statsData as any[] | null)?.forEach((s) => {
+        map[s.ad_id] = { impressions: Number(s.impressions), clicks: Number(s.clicks) };
+      });
+      setStats(map);
+    } catch (e: any) {
+      console.warn("ad stats failed", e);
+      setStats({});
+    }
     setLoading(false);
   };
 
   useEffect(() => {
+    // Wait for auth to hydrate so the RPC has a JWT
+    if (authLoading) return;
+    if (!user || role !== "admin") return;
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, role]);
 
   const reset = () => {
     setForm(empty);
