@@ -28,8 +28,13 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanEmail = email.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "").trim().toLowerCase();
     if (!fullName.trim()) {
       toast({ title: "कृपया अपना नाम दर्ज करें", variant: "destructive" });
+      return;
+    }
+    if (!cleanEmail) {
+      toast({ title: "कृपया सही ईमेल दर्ज करें", variant: "destructive" });
       return;
     }
     if (password.length < 6) {
@@ -38,13 +43,13 @@ const Signup = () => {
     }
     setIsLoading(true);
     try {
-      const { error } = await signUp(email.trim(), password, fullName.trim());
+      const { error } = await signUp(cleanEmail, password, fullName.trim());
       if (error) {
         toast({ title: "साइन अप विफल", description: error, variant: "destructive" });
         return;
       }
       // Auto-confirm enabled — try immediate login
-      const { error: signInErr } = await signIn(email.trim(), password);
+      const { error: signInErr } = await signIn(cleanEmail, password);
       if (signInErr) {
         toast({ title: "खाता बन गया!", description: "अब लॉगिन करें।" });
         navigate("/login", { replace: true });
