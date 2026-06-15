@@ -9,25 +9,23 @@ interface ShareActionsProps {
   url?: string;
 }
 
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+// Always share the clean, published article URL — never the backend function URL or preview origin.
+const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
   const location = useLocation();
 
-  // Extract slug from current path (clean URL like /my-slug)
-  const slug = (url ? new URL(url).pathname : location.pathname).replace(/^\/+/, "").split("/")[0];
-
-  // Prerendered share URL — returns HTML with OG tags for crawlers,
-  // then redirects browsers to the real article page.
-  const shareUrl = useMemo(() => {
-    if (PROJECT_ID && slug) {
-      return `https://${PROJECT_ID}.supabase.co/functions/v1/share/${slug}`;
+  const slug = useMemo(() => {
+    try {
+      const path = url ? new URL(url).pathname : location.pathname;
+      return path.replace(/^\/+/, "").split("/")[0];
+    } catch {
+      return location.pathname.replace(/^\/+/, "").split("/")[0];
     }
-    return url || (typeof window !== "undefined" ? window.location.href : "");
-  }, [slug, url]);
+  }, [url, location.pathname]);
 
-  const directUrl = url || (typeof window !== "undefined" ? window.location.href : "");
+  const shareUrl = slug ? `${PUBLIC_SITE}/${slug}` : PUBLIC_SITE;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
 
@@ -41,12 +39,18 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
   );
 
   const nativeShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title, url: shareUrl });
-      return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url: shareUrl });
+        return;
+      }
+    } catch { /* user cancelled */ }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: "लिंक कॉपी हुआ", description: shareUrl });
+    } catch {
+      toast({ title: "लिंक कॉपी नहीं हो सका", variant: "destructive" });
     }
-    await navigator.clipboard.writeText(directUrl);
-    toast({ title: "लिंक कॉपी हुआ" });
   };
 
   return (
@@ -60,8 +64,8 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
         </Button>
       ))}
       <Button type="button" variant="ghost" size="sm" onClick={nativeShare}>
-        {navigator.share ? <Share2 className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-        {navigator.share ? "शेयर" : "लिंक"}
+        {typeof navigator !== "undefined" && navigator.share ? <Share2 className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+        {typeof navigator !== "undefined" && navigator.share ? "शेयर" : "लिंक कॉपी"}
       </Button>
     </div>
   );
