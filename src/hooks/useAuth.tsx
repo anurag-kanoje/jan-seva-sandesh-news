@@ -22,6 +22,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SYNC_KEY = "jss-auth-sync";
 const CHANNEL_NAME = "jss-auth";
 
+const normalizeEmailForAuth = (value: string) =>
+  value
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "")
+    .trim()
+    .toLowerCase();
+
+const normalizePasswordForAuth = (value: string) =>
+  value
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole>(null);
@@ -125,10 +137,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const normalizedEmail = normalizeEmailForAuth(email);
+    const normalizedPassword = normalizePasswordForAuth(password);
+
+    const { data: current } = await supabase.auth.getSession();
+    if (current.session?.user?.email?.toLowerCase() === normalizedEmail) {
+      return { error: null };
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: normalizedPassword,
+    });
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
-        return { error: "ईमेल या पासवर्ड गलत है।" };
+        return { error: "ईमेल या पासवर्ड मेल नहीं खा रहा है। कृपया पासवर्ड दिखाकर जांचें या पासवर्ड रीसेट करें।" };
       }
       return { error: error.message };
     }
@@ -147,9 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = window.location.origin;
+    const normalizedEmail = normalizeEmailForAuth(email);
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: normalizedEmail,
+      password: normalizePasswordForAuth(password),
       options: {
         emailRedirectTo: redirectUrl,
         data: { full_name: fullName },
@@ -174,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resendVerification = async (email: string) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
-      email,
+      email: normalizeEmailForAuth(email),
       options: { emailRedirectTo: window.location.origin },
     });
     if (error) {
