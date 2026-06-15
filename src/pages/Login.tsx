@@ -28,13 +28,14 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    const cleanEmail = email.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "").trim().toLowerCase();
+    if (!cleanEmail || !password) {
       toast({ title: "कृपया ईमेल और पासवर्ड दर्ज करें", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const { error } = await signIn(email.trim(), password);
+      const { error } = await signIn(cleanEmail, password);
       if (error) {
         toast({ title: "लॉगिन विफल", description: error, variant: "destructive" });
       } else {
