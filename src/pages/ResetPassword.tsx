@@ -86,11 +86,30 @@ const ResetPassword = () => {
     }
     setLoading(true);
     const cleanPassword = password.replace(/[\u200B-\u200D\uFEFF]/g, "");
-    const updatePromise = supabase.auth.updateUser({ password: cleanPassword });
-    const timeoutPromise = new Promise<{ error: Error }>((resolve) =>
-      window.setTimeout(() => resolve({ error: new Error("पासवर्ड बदलने में समय लग रहा है। कृपया लिंक दोबारा खोलकर फिर कोशिश करें।") }), 15000),
-    );
-    const { error } = await Promise.race([updatePromise, timeoutPromise]);
+    const timeoutPromise = new Promise<"timeout">((resolve) => window.setTimeout(() => resolve("timeout"), 12000));
+    const updateResult = await Promise.race([supabase.auth.updateUser({ password: cleanPassword }), timeoutPromise]);
+
+    let error = updateResult === "timeout" ? new Error("पासवर्ड बदलने में समय लग रहा है।") : updateResult.error;
+    if (error) {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (accessToken) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+            method: "PUT",
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ password: cleanPassword }),
+          });
+          error = response.ok ? null : new Error((await response.json().catch(() => null))?.msg || "पासवर्ड अपडेट नहीं हो पाया।");
+        } catch (fallbackError) {
+          error = fallbackError instanceof Error ? fallbackError : new Error("पासवर्ड अपडेट नहीं हो पाया।");
+        }
+      }
+    }
     setLoading(false);
     if (error) {
       toast({ title: "त्रुटि", description: error.message, variant: "destructive" });
