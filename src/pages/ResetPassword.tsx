@@ -39,8 +39,16 @@ const ResetPassword = () => {
       const { hashParams, searchParams } = readUrlParams();
       const tokenHash = searchParams.get("token_hash") || hashParams.get("token_hash");
       const type = searchParams.get("type") || hashParams.get("type");
+      const code = searchParams.get("code") || hashParams.get("code");
       const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) markFailed(error.message);
+        else markReady();
+        return;
+      }
 
       if (tokenHash && type === "recovery") {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
