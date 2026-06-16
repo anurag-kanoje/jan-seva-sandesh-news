@@ -17,15 +17,70 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // detectSessionInUrl handles the recovery token automatically
+    let mounted = true;
+
+    const markReady = () => {
+      if (mounted) setReady(true);
+    };
+
+    const markFailed = (message = "रीसेट लिंक अमान्य या एक्सपायर हो गया है। कृपया नया लिंक भेजें।") => {
+      if (!mounted) return;
+      setReady(false);
+      toast({ title: "लिंक सत्यापित नहीं हुआ", description: message, variant: "destructive" });
+    };
+
+    const readUrlParams = () => {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const searchParams = new URLSearchParams(window.location.search);
+      return { hashParams, searchParams };
+    };
+
+    const establishRecoverySession = async () => {
+      const { hashParams, searchParams } = readUrlParams();
+      const tokenHash = searchParams.get("token_hash") || hashParams.get("token_hash");
+      const type = searchParams.get("type") || hashParams.get("type");
+      const code = searchParams.get("code") || hashParams.get("code");
+      const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) markFailed(error.message);
+        else markReady();
+        return;
+      }
+
+      if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (error) markFailed(error.message);
+        else markReady();
+        return;
+      }
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) markFailed(error.message);
+        else markReady();
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error) markFailed(error.message);
+      else if (data.session) markReady();
+      else markFailed("इस पेज पर मान्य रीसेट सेशन नहीं मिला। कृपया ईमेल से नया लिंक खोलें।");
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
     });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+
+    establishRecoverySession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +93,31 @@ const ResetPassword = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    const cleanPassword = password.replace(/[\u200B-\u200D\uFEFF]/g, "");
+    const timeoutPromise = new Promise<"timeout">((resolve) => window.setTimeout(() => resolve("timeout"), 12000));
+    const updateResult = await Promise.race([supabase.auth.updateUser({ password: cleanPassword }), timeoutPromise]);
+
+    let error = updateResult === "timeout" ? new Error("पासवर्ड बदलने में समय लग रहा है।") : updateResult.error;
+    if (error) {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (accessToken) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+            method: "PUT",
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ password: cleanPassword }),
+          });
+          error = response.ok ? null : new Error((await response.json().catch(() => null))?.msg || "पासवर्ड अपडेट नहीं हो पाया।");
+        } catch (fallbackError) {
+          error = fallbackError instanceof Error ? fallbackError : new Error("पासवर्ड अपडेट नहीं हो पाया।");
+        }
+      }
+    }
     setLoading(false);
     if (error) {
       toast({ title: "त्रुटि", description: error.message, variant: "destructive" });
