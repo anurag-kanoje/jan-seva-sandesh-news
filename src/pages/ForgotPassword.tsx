@@ -16,9 +16,10 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const cleanEmail = email.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "").trim().toLowerCase();
+    if (!cleanEmail) return;
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
