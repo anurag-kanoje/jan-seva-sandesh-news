@@ -29,10 +29,15 @@ const normalizeEmailForAuth = (value: string) =>
     .trim()
     .toLowerCase();
 
-const normalizePasswordForAuth = (value: string) =>
-  value
-    .normalize("NFKC")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+const stripInvisiblePasswordChars = (value: string) =>
+  value.replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+const getPasswordAttempts = (value: string) => {
+  const stripped = stripInvisiblePasswordChars(value);
+  const legacyNormalized = stripped.normalize("NFKC");
+  const trimmed = stripped.trim();
+  return Array.from(new Set([value, stripped, trimmed, legacyNormalized].filter(Boolean)));
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -138,24 +143,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const normalizedEmail = normalizeEmailForAuth(email);
-    const normalizedPassword = normalizePasswordForAuth(password);
 
     const { data: current } = await supabase.auth.getSession();
     if (current.session?.user?.email?.toLowerCase() === normalizedEmail) {
       return { error: null };
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password: normalizedPassword,
-    });
-    if (error) {
-      if (error.message.includes("Invalid login credentials")) {
+    let lastError: string | null = null;
+    for (const passwordAttempt of getPasswordAttempts(password)) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: passwordAttempt,
+      });
+      if (!error) return { error: null };
+      lastError = error.message;
+      if (!error.message.includes("Invalid login credentials")) {
+        return { error: error.message };
+      }
+    }
+
+    if (lastError) {
+      if (lastError.includes("Invalid login credentials")) {
         return { error: "ईमेल या पासवर्ड मेल नहीं खा रहा है। कृपया पासवर्ड दिखाकर जांचें या पासवर्ड रीसेट करें।" };
       }
-      return { error: error.message };
+      return { error: lastError };
     }
-    return { error: null };
+    return { error: "कृपया पासवर्ड दर्ज करें।" };
   };
 
   const signInWithGoogle = async () => {
@@ -173,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const normalizedEmail = normalizeEmailForAuth(email);
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
-      password: normalizePasswordForAuth(password),
+      password: stripInvisiblePasswordChars(password),
       options: {
         emailRedirectTo: redirectUrl,
         data: { full_name: fullName },
