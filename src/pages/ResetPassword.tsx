@@ -20,7 +20,8 @@ const ResetPassword = () => {
     let mounted = true;
 
     const markReady = () => {
-      if (mounted) setReady(true);
+      if (!mounted) return;
+      setReady(true);
     };
 
     const markFailed = (message = "रीसेट लिंक अमान्य या एक्सपायर हो गया है। कृपया नया लिंक भेजें।") => {
@@ -35,6 +36,19 @@ const ResetPassword = () => {
       return { hashParams, searchParams };
     };
 
+    const waitForRecoveredSession = async () => {
+      const deadline = Date.now() + 8000;
+      while (mounted && Date.now() < deadline) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          markReady();
+          return true;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+      return false;
+    };
+
     const establishRecoverySession = async () => {
       const { hashParams, searchParams } = readUrlParams();
       const tokenHash = searchParams.get("token_hash") || hashParams.get("token_hash");
@@ -46,14 +60,17 @@ const ResetPassword = () => {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) markFailed(error.message);
-        else markReady();
+        else if (!(await waitForRecoveredSession())) markFailed("रीसेट सेशन तैयार नहीं हुआ। कृपया ईमेल से लिंक दोबारा खोलें।");
         return;
       }
 
       if (tokenHash && type === "recovery") {
-        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
         if (error) markFailed(error.message);
-        else markReady();
+        else if (data.session) {
+          await supabase.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+          markReady();
+        } else if (!(await waitForRecoveredSession())) markFailed("रीसेट सेशन तैयार नहीं हुआ। कृपया ईमेल से लिंक दोबारा खोलें।");
         return;
       }
 
@@ -64,10 +81,9 @@ const ResetPassword = () => {
         return;
       }
 
-      const { data, error } = await supabase.auth.getSession();
-      if (error) markFailed(error.message);
-      else if (data.session) markReady();
-      else markFailed("इस पेज पर मान्य रीसेट सेशन नहीं मिला। कृपया ईमेल से नया लिंक खोलें।");
+      if (!(await waitForRecoveredSession())) {
+        markFailed("इस पेज पर मान्य रीसेट सेशन नहीं मिला। कृपया ईमेल से नया लिंक खोलें।");
+      }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
