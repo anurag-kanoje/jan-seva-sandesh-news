@@ -47,6 +47,9 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
       <div className="relative">
         <Input
           ref={ref}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           {...props}
           type={visible ? "text" : "password"}
           className={cn(inputPaddingClass, className)}
