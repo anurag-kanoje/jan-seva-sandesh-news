@@ -43,7 +43,7 @@ const ForgotPassword = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">ईमेल</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
             </div>
             {sent && (
               <p className="text-sm text-muted-foreground">

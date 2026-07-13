@@ -112,12 +112,13 @@ const ArticlePage = () => {
 
   const dateStr = new Date(article.created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "long", year: "numeric" });
   const articleUrl = typeof window !== "undefined" ? window.location.href : undefined;
+  const articleTitle = article.title.replace(/^#+\s*/, "").trim();
 
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
-        title={`${article.title} - जन सेवा संदेश`}
-        description={(article.excerpt || article.title).slice(0, 160)}
+        title={articleTitle}
+        description={articleTitle.slice(0, 160)}
         image={article.image_url || undefined}
         type="article"
         publishedAt={article.created_at}
@@ -125,7 +126,7 @@ const ArticlePage = () => {
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "NewsArticle",
-          headline: article.title,
+          headline: articleTitle,
           image: article.image_url ? [article.image_url] : undefined,
           datePublished: article.created_at,
           author: article.author_name
@@ -136,7 +137,7 @@ const ArticlePage = () => {
             name: "जन सेवा संदेश",
           },
           articleSection: article.category_name || undefined,
-          description: article.excerpt || article.title,
+          description: articleTitle,
         }}
       />
       <Header />
@@ -151,7 +152,7 @@ const ArticlePage = () => {
           </Link>
         )}
 
-        <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">{article.title}</h1>
+        <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">{articleTitle}</h1>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6 flex-wrap">
           <Link to={`/author/${article.author_id}`} className="flex items-center gap-1 hover:text-accent">
@@ -161,12 +162,12 @@ const ArticlePage = () => {
           <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{article.views} व्यू</span>
         </div>
 
-        <ShareActions title={article.title} url={articleUrl} />
+        <ShareActions title={articleTitle} url={articleUrl} />
 
         <AdSlot slot="article-top" className="my-6" height="h-24" />
 
         {article.image_url && (
-          <img src={article.image_url} alt={article.title} className="w-full rounded-lg mb-6 max-h-[500px] object-cover" loading="lazy" />
+          <img src={article.image_url} alt={articleTitle} className="w-full rounded-lg mb-6 max-h-[500px] object-cover" loading="lazy" />
         )}
 
         <article className="prose prose-lg max-w-none text-foreground leading-relaxed whitespace-pre-wrap">

@@ -5,11 +5,13 @@ const SITE_URL = Deno.env.get("SITE_URL") || "https://jss-news-foundation.lovabl
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+const cleanTitle = (s: string) => s.replace(/^#+\s*/, "").trim();
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   // path: /share/<slug> OR /functions/v1/share/<slug>
   const parts = url.pathname.split("/").filter(Boolean);
-  const slug = parts[parts.length - 1];
+  const slug = decodeURIComponent(parts[parts.length - 1] || "");
 
   if (!slug || slug === "share") {
     return Response.redirect(SITE_URL, 302);
@@ -28,8 +30,8 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   const target = `${SITE_URL}/${slug}`;
-  const title = article?.title || "जन सेवा संदेश";
-  const desc = (article?.excerpt || "जन सेवा संदेश - सच्चाई की आवाज़").slice(0, 200);
+  const title = cleanTitle(article?.title || "जन सेवा संदेश");
+  const desc = title.slice(0, 200);
   const img = article?.image_url || "";
 
   const html = `<!doctype html>

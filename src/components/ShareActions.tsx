@@ -11,6 +11,7 @@ interface ShareActionsProps {
 
 // Always share the clean, published article URL — never the backend function URL or preview origin.
 const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
+const SHARE_PREVIEW_BASE = "https://qltedcfuztowideidlrh.supabase.co/functions/v1/share";
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
@@ -25,29 +26,31 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
     }
   }, [url, location.pathname]);
 
-  const shareUrl = slug ? `${PUBLIC_SITE}/${slug}` : PUBLIC_SITE;
-  const encodedUrl = encodeURIComponent(shareUrl);
+  const articleUrl = slug ? `${PUBLIC_SITE}/${encodeURI(slug)}` : PUBLIC_SITE;
+  const previewUrl = slug ? `${SHARE_PREVIEW_BASE}/${encodeURIComponent(slug)}` : PUBLIC_SITE;
+  const encodedArticleUrl = encodeURIComponent(articleUrl);
+  const encodedPreviewUrl = encodeURIComponent(previewUrl);
   const encodedTitle = encodeURIComponent(title);
 
   const links = useMemo(
     () => [
-      { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}` },
-      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}` },
+      { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%20${encodedPreviewUrl}` },
+      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedPreviewUrl}` },
+      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedPreviewUrl}&text=${encodedTitle}` },
     ],
-    [encodedTitle, encodedUrl],
+    [encodedTitle, encodedPreviewUrl],
   );
 
   const nativeShare = async () => {
     try {
       if (navigator.share) {
-        await navigator.share({ title, url: shareUrl });
+        await navigator.share({ title, text: title, url: articleUrl });
         return;
       }
     } catch { /* user cancelled */ }
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      toast({ title: "लिंक कॉपी हुआ", description: shareUrl });
+      await navigator.clipboard.writeText(articleUrl);
+      toast({ title: "लिंक कॉपी हुआ", description: articleUrl });
     } catch {
       toast({ title: "लिंक कॉपी नहीं हो सका", variant: "destructive" });
     }

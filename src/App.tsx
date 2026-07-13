@@ -1,10 +1,11 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -26,6 +27,28 @@ const SlugRouter = () => {
 const LegacyArticleRedirect = () => {
   const { slug } = useParams<{ slug: string }>();
   return <Navigate to={`/${slug}`} replace />;
+};
+
+const POST_AUTH_PATH_KEY = "jss-post-auth-path";
+
+const AuthRedirectHandler = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!user || loading) return;
+    let target: string | null = null;
+    try {
+      target = sessionStorage.getItem(POST_AUTH_PATH_KEY);
+      if (target) sessionStorage.removeItem(POST_AUTH_PATH_KEY);
+    } catch { /* noop */ }
+    if (target && ["/", "/login", "/signup"].includes(location.pathname)) {
+      navigate(target, { replace: true });
+    }
+  }, [location.pathname, loading, navigate, user]);
+
+  return null;
 };
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -60,6 +83,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AuthRedirectHandler />
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
