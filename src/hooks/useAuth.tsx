@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import type { Session, User } from "@supabase/supabase-js";
@@ -21,6 +21,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SYNC_KEY = "jss-auth-sync";
 const CHANNEL_NAME = "jss-auth";
+const POST_AUTH_PATH_KEY = "jss-post-auth-path";
+
+const notifyAuthTabs = (event: string) => {
+  const payload = { event, ts: Date.now() };
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify(payload));
+  } catch { /* noop */ }
+  try {
+    window.dispatchEvent(new StorageEvent("storage", { key: SYNC_KEY, newValue: JSON.stringify(payload) }));
+  } catch { /* noop */ }
+  return payload;
+};
 
 const normalizeEmailForAuth = (value: string) =>
   value
@@ -46,74 +58,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roleLoading, setRoleLoading] = useState(true);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
-  const fetchRole = async (userId: string) => {
+  const fetchRole = useCallback(async (userId: string) => {
     setRoleLoading(true);
     try {
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
-      setRole(data?.role ?? "user");
+        .eq("user_id", userId);
+      const roles = (data ?? []).map((item) => item.role as AppRole);
+      setRole(roles.includes("admin") ? "admin" : roles.includes("writer") ? "writer" : "user");
     } catch {
       setRole("user");
     } finally {
       setRoleLoading(false);
     }
-  };
+  }, []);
+
+  const applySession = useCallback((session: Session | null) => {
+    const u = session?.user ?? null;
+    setUser(u);
+    if (u) {
+      window.setTimeout(() => fetchRole(u.id), 0);
+    } else {
+      setRole(null);
+      setRoleLoading(false);
+    }
+    setLoading(false);
+  }, [fetchRole]);
+
+  const resyncFromStorage = useCallback((delay = 0) => {
+    const run = () =>
+      supabase.auth.getSession()
+        .then(({ data: { session } }) => applySession(session))
+        .catch(() => applySession(null));
+    if (delay > 0) window.setTimeout(run, delay);
+    else run();
+  }, [applySession]);
 
   useEffect(() => {
     let cancelled = false;
 
-    const applySession = (session: Session | null) => {
-      if (cancelled) return;
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        setTimeout(() => fetchRole(u.id), 0);
-      } else {
-        setRole(null);
-        setRoleLoading(false);
-      }
-      setLoading(false);
+    const safeApplySession = (session: Session | null) => {
+      if (!cancelled) applySession(session);
     };
 
-    // Pull session from storage (with small delay to let supabase finish writing on the other tab)
-    const resyncFromStorage = (delay = 0) => {
+    // Pull session from storage (with small delay to let the auth client finish writing on mobile browsers)
+    const safeResyncFromStorage = (delay = 0) => {
       const run = () =>
-        supabase.auth.getSession().then(({ data: { session } }) => applySession(session));
-      if (delay > 0) setTimeout(run, delay);
+        supabase.auth.getSession()
+          .then(({ data: { session } }) => safeApplySession(session))
+          .catch(() => safeApplySession(null));
+      if (delay > 0) window.setTimeout(run, delay);
       else run();
     };
 
     // Source of truth: supabase auth state changes (fires on login, logout, token refresh, and storage-driven changes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      applySession(session);
+      safeApplySession(session);
       // Notify other tabs after the auth client has settled.
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-        try {
-          localStorage.setItem(SYNC_KEY, JSON.stringify({ event, ts: Date.now() }));
-        } catch { /* noop */ }
-        try { channelRef.current?.postMessage({ event, ts: Date.now() }); } catch { /* noop */ }
+        const payload = notifyAuthTabs(event);
+        try { channelRef.current?.postMessage(payload); } catch { /* noop */ }
       }
     });
 
     // Initial hydration
     supabase.auth.getSession()
-      .then(({ data: { session } }) => applySession(session))
-      .catch(() => applySession(null));
+      .then(({ data: { session } }) => safeApplySession(session))
+      .catch(() => safeApplySession(null));
 
     // Cross-tab sync via storage (fires in OTHER tabs only — perfect for sync)
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       // Our explicit sync ping
       if (e.key === SYNC_KEY) {
-        resyncFromStorage(150);
+        safeResyncFromStorage(150);
         return;
       }
       // Direct supabase token key changes (sb-<ref>-auth-token)
       if (e.key.startsWith("sb-") && e.key.endsWith("-auth-token")) {
-        resyncFromStorage(150);
+        safeResyncFromStorage(150);
       }
     };
     window.addEventListener("storage", onStorage);
@@ -121,25 +145,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // BroadcastChannel fast-path
     try {
       const ch = new BroadcastChannel(CHANNEL_NAME);
-      ch.onmessage = () => resyncFromStorage(150);
+      ch.onmessage = () => safeResyncFromStorage(150);
       channelRef.current = ch;
     } catch { /* noop */ }
 
-    // Refresh when tab regains focus
+    // Refresh when mobile browser tabs/webviews resume from background or bfcache.
     const onVisibility = () => {
-      if (document.visibilityState === "visible") resyncFromStorage(0);
+      if (document.visibilityState === "visible") safeResyncFromStorage(0);
     };
+    const onFocus = () => safeResyncFromStorage(0);
+    const onPageShow = () => safeResyncFromStorage(0);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("online", onFocus);
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("online", onFocus);
       try { channelRef.current?.close(); } catch { /* noop */ }
       channelRef.current = null;
     };
-  }, []);
+  }, [applySession]);
 
   const signIn = async (email: string, password: string) => {
     const normalizedEmail = normalizeEmailForAuth(email);
@@ -151,11 +183,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let lastError: string | null = null;
     for (const passwordAttempt of getPasswordAttempts(password)) {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: passwordAttempt,
       });
-      if (!error) return { error: null };
+      if (!error) {
+        if (data.session) {
+          applySession(data.session);
+          const payload = notifyAuthTabs("SIGNED_IN");
+          try { channelRef.current?.postMessage(payload); } catch { /* noop */ }
+          await fetchRole(data.session.user.id);
+        } else {
+          resyncFromStorage(150);
+        }
+        return { error: null };
+      }
       lastError = error.message;
       if (!error.message.includes("Invalid login credentials")) {
         return { error: error.message };
@@ -172,8 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    try { sessionStorage.setItem(POST_AUTH_PATH_KEY, "/dashboard"); } catch { /* noop */ }
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/dashboard`,
+      redirect_uri: window.location.origin,
     });
     if (result.error) {
       return { error: "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
