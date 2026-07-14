@@ -2,6 +2,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SITE_URL = Deno.env.get("SITE_URL") || "https://jss-news-foundation.lovable.app";
 
+const LEGACY_ARTICLE_SLUGS: Record<string, string> = {
+  "प्राइवेट-स्कूलों-की-rte-गैर-सहयोग-पर-सवाल-शिक्षा-अधिकार-कानून-पर-टकराव-क्यों-22-अप्रैल-से-जारी-मामला-6r1cm":
+    "rte-private-schools-education-row",
+};
+
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -11,7 +16,8 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   // path: /share/<slug> OR /functions/v1/share/<slug>
   const parts = url.pathname.split("/").filter(Boolean);
-  const slug = decodeURIComponent(parts[parts.length - 1] || "");
+  const requestedSlug = decodeURIComponent(parts[parts.length - 1] || "");
+  const slug = LEGACY_ARTICLE_SLUGS[requestedSlug] || requestedSlug;
 
   if (!slug || slug === "share") {
     return Response.redirect(SITE_URL, 302);
@@ -29,7 +35,11 @@ Deno.serve(async (req) => {
     .eq("status", "approved")
     .maybeSingle();
 
-  const target = `${SITE_URL}/${slug}`;
+  if (!article) {
+    return Response.redirect(SITE_URL, 302);
+  }
+
+  const target = `${SITE_URL}/${article.slug || slug}`;
   const title = cleanTitle(article?.title || "जन सेवा संदेश");
   const desc = title.slice(0, 200);
   const img = article?.image_url || "";
