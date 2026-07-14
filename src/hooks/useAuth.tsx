@@ -23,16 +23,17 @@ const SYNC_KEY = "jss-auth-sync";
 const CHANNEL_NAME = "jss-auth";
 const POST_AUTH_PATH_KEY = "jss-post-auth-path";
 
+const AUTH_SYNC_RETRY_DELAYS = [0, 120, 300, 700, 1200, 2000];
+
 const notifyAuthTabs = (event: string) => {
   const payload = { event, ts: Date.now() };
   try {
     localStorage.setItem(SYNC_KEY, JSON.stringify(payload));
   } catch { /* noop */ }
-  try {
-    window.dispatchEvent(new StorageEvent("storage", { key: SYNC_KEY, newValue: JSON.stringify(payload) }));
-  } catch { /* noop */ }
   return payload;
 };
+
+const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const normalizeEmailForAuth = (value: string) =>
   value
@@ -86,13 +87,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, [fetchRole]);
 
-  const resyncFromStorage = useCallback((delay = 0) => {
-    const run = () =>
-      supabase.auth.getSession()
-        .then(({ data: { session } }) => applySession(session))
-        .catch(() => applySession(null));
-    if (delay > 0) window.setTimeout(run, delay);
-    else run();
+  const hydrateSession = useCallback(async ({ applyNull = true, expectedUserId }: { applyNull?: boolean; expectedUserId?: string } = {}) => {
+    let lastSession: Session | null = null;
+
+    for (const wait of AUTH_SYNC_RETRY_DELAYS) {
+      if (wait > 0) await delay(wait);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        lastSession = session ?? null;
+        if (!expectedUserId || session?.user?.id === expectedUserId) {
+          if (session || applyNull) applySession(session ?? null);
+          return session ?? null;
+        }
+      } catch {
+        lastSession = null;
+      }
+    }
+
+    if (lastSession || applyNull) applySession(lastSession);
+    return lastSession;
   }, [applySession]);
 
   useEffect(() => {
@@ -102,14 +115,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!cancelled) applySession(session);
     };
 
-    // Pull session from storage (with small delay to let the auth client finish writing on mobile browsers)
-    const safeResyncFromStorage = (delay = 0) => {
-      const run = () =>
-        supabase.auth.getSession()
-          .then(({ data: { session } }) => safeApplySession(session))
-          .catch(() => safeApplySession(null));
-      if (delay > 0) window.setTimeout(run, delay);
-      else run();
+    // Pull session from storage with retries. Mobile browsers often deliver the
+    // storage/broadcast event before the auth token is readable in background tabs.
+    const safeHydrateSession = async ({ applyNull = true }: { applyNull?: boolean } = {}) => {
+      let lastSession: Session | null = null;
+      for (const wait of AUTH_SYNC_RETRY_DELAYS) {
+        if (wait > 0) await delay(wait);
+        if (cancelled) return null;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          lastSession = session ?? null;
+          if (session) {
+            safeApplySession(session);
+            return session;
+          }
+        } catch {
+          lastSession = null;
+        }
+      }
+      if (applyNull) safeApplySession(lastSession);
+      return lastSession;
     };
 
     // Source of truth: supabase auth state changes (fires on login, logout, token refresh, and storage-driven changes)
@@ -123,21 +148,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Initial hydration
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => safeApplySession(session))
-      .catch(() => safeApplySession(null));
+    void safeHydrateSession({ applyNull: true });
 
     // Cross-tab sync via storage (fires in OTHER tabs only — perfect for sync)
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       // Our explicit sync ping
       if (e.key === SYNC_KEY) {
-        safeResyncFromStorage(150);
+        let event = "";
+        try { event = JSON.parse(e.newValue || "{}").event || ""; } catch { /* noop */ }
+        void safeHydrateSession({ applyNull: event === "SIGNED_OUT" });
         return;
       }
       // Direct supabase token key changes (sb-<ref>-auth-token)
       if (e.key.startsWith("sb-") && e.key.endsWith("-auth-token")) {
-        safeResyncFromStorage(150);
+        void safeHydrateSession({ applyNull: e.newValue === null });
       }
     };
     window.addEventListener("storage", onStorage);
@@ -145,16 +170,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // BroadcastChannel fast-path
     try {
       const ch = new BroadcastChannel(CHANNEL_NAME);
-      ch.onmessage = () => safeResyncFromStorage(150);
+      ch.onmessage = (message) => {
+        const event = message.data?.event;
+        void safeHydrateSession({ applyNull: event === "SIGNED_OUT" });
+      };
       channelRef.current = ch;
     } catch { /* noop */ }
 
     // Refresh when mobile browser tabs/webviews resume from background or bfcache.
     const onVisibility = () => {
-      if (document.visibilityState === "visible") safeResyncFromStorage(0);
+      if (document.visibilityState === "visible") void safeHydrateSession({ applyNull: true });
     };
-    const onFocus = () => safeResyncFromStorage(0);
-    const onPageShow = () => safeResyncFromStorage(0);
+    const onFocus = () => void safeHydrateSession({ applyNull: true });
+    const onPageShow = () => void safeHydrateSession({ applyNull: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("pageshow", onPageShow);
@@ -190,11 +218,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error) {
         if (data.session) {
           applySession(data.session);
-          const payload = notifyAuthTabs("SIGNED_IN");
-          try { channelRef.current?.postMessage(payload); } catch { /* noop */ }
+          const readableSession = await hydrateSession({ applyNull: false, expectedUserId: data.session.user.id });
+          if (!readableSession && data.session.access_token && data.session.refresh_token) {
+            await supabase.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            });
+            await hydrateSession({ applyNull: false, expectedUserId: data.session.user.id });
+          }
           await fetchRole(data.session.user.id);
         } else {
-          resyncFromStorage(150);
+          await hydrateSession({ applyNull: false });
         }
         return { error: null };
       }
