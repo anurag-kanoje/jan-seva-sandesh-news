@@ -12,7 +12,7 @@ interface ShareActionsProps {
 
 // Always share the clean, published article URL — never the backend function URL or preview origin.
 const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
-const SHARE_PREVIEW_BASE = "https://qltedcfuztowideidlrh.supabase.co/functions/v1/share";
+const SHARE_PREVIEW_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/share`;
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
