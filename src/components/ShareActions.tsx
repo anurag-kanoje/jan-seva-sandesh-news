@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Facebook, Link2, MessageCircle, Share2, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { cleanArticleTitle, getCanonicalArticleSlug } from "@/lib/article-slugs";
 
 interface ShareActionsProps {
   title: string;
@@ -11,7 +12,7 @@ interface ShareActionsProps {
 
 // Always share the clean, published article URL — never the backend function URL or preview origin.
 const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
-const SHARE_PREVIEW_BASE = "https://qltedcfuztowideidlrh.supabase.co/functions/v1/share";
+const SHARE_PREVIEW_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/share`;
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
@@ -20,31 +21,32 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
   const slug = useMemo(() => {
     try {
       const path = url ? new URL(url).pathname : location.pathname;
-      return path.replace(/^\/+/, "").split("/")[0];
+      return getCanonicalArticleSlug(path.replace(/^\/+/, "").split("/")[0]);
     } catch {
-      return location.pathname.replace(/^\/+/, "").split("/")[0];
+      return getCanonicalArticleSlug(location.pathname.replace(/^\/+/, "").split("/")[0]);
     }
   }, [url, location.pathname]);
 
+  const shareTitle = cleanArticleTitle(title);
   const articleUrl = slug ? `${PUBLIC_SITE}/${encodeURI(slug)}` : PUBLIC_SITE;
   const previewUrl = slug ? `${SHARE_PREVIEW_BASE}/${encodeURIComponent(slug)}` : PUBLIC_SITE;
   const encodedArticleUrl = encodeURIComponent(articleUrl);
   const encodedPreviewUrl = encodeURIComponent(previewUrl);
-  const encodedTitle = encodeURIComponent(title);
+  const encodedTitle = encodeURIComponent(shareTitle);
 
   const links = useMemo(
     () => [
-      { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%20${encodedPreviewUrl}` },
+      { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%0A${encodedArticleUrl}` },
       { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedPreviewUrl}` },
       { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedPreviewUrl}&text=${encodedTitle}` },
     ],
-    [encodedTitle, encodedPreviewUrl],
+    [encodedArticleUrl, encodedTitle, encodedPreviewUrl],
   );
 
   const nativeShare = async () => {
     try {
       if (navigator.share) {
-        await navigator.share({ title, text: title, url: articleUrl });
+        await navigator.share({ title: shareTitle, text: shareTitle, url: articleUrl });
         return;
       }
     } catch { /* user cancelled */ }

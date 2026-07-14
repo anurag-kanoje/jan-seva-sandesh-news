@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Eye, User, ArrowLeft } from "lucide-react";
 import { hasViewedArticle, markArticleViewed } from "@/lib/rate-limit";
+import { cleanArticleTitle, getCanonicalArticleSlug } from "@/lib/article-slugs";
 
 interface ArticleDetail {
   id: string;
@@ -29,6 +30,7 @@ interface ArticleDetail {
 
 const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [related, setRelated] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,14 +39,20 @@ const ArticlePage = () => {
     if (!slug) return;
     const fetchArticle = async () => {
       setLoading(true);
+      setArticle(null);
+      const canonicalSlug = getCanonicalArticleSlug(slug);
       const { data } = await supabase
         .from("articles")
         .select("*, profiles:author_id(full_name), categories:category_id(name)")
-        .eq("slug", slug)
+        .eq("slug", canonicalSlug)
+        .eq("status", "approved")
         .single();
 
       if (data) {
         const a = data as any;
+        if (a.slug && a.slug !== slug) {
+          navigate(`/${a.slug}`, { replace: true });
+        }
         setArticle({
           ...a,
           category_name: a.categories?.name ?? null,
@@ -79,7 +87,7 @@ const ArticlePage = () => {
       setLoading(false);
     };
     fetchArticle();
-  }, [slug]);
+  }, [navigate, slug]);
 
   if (loading) {
     return (
@@ -111,14 +119,15 @@ const ArticlePage = () => {
   }
 
   const dateStr = new Date(article.created_at).toLocaleDateString("hi-IN", { day: "numeric", month: "long", year: "numeric" });
-  const articleUrl = typeof window !== "undefined" ? window.location.href : undefined;
-  const articleTitle = article.title.replace(/^#+\s*/, "").trim();
+  const articleUrl = `https://jss-news-foundation.lovable.app/${article.slug}`;
+  const articleTitle = cleanArticleTitle(article.title);
 
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
         title={articleTitle}
         description={articleTitle.slice(0, 160)}
+        canonical={articleUrl}
         image={article.image_url || undefined}
         type="article"
         publishedAt={article.created_at}
