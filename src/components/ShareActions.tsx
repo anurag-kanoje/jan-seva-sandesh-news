@@ -31,16 +31,17 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
   const articleUrl = slug ? `${PUBLIC_SITE}/${encodeURI(slug)}` : PUBLIC_SITE;
   const previewUrl = slug ? `${SHARE_PREVIEW_BASE}/${encodeURIComponent(slug)}` : PUBLIC_SITE;
   const encodedArticleUrl = encodeURIComponent(articleUrl);
-  const encodedPreviewUrl = encodeURIComponent(previewUrl);
   const encodedTitle = encodeURIComponent(shareTitle);
 
   const links = useMemo(
     () => [
       { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%0A${encodedArticleUrl}` },
-      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedPreviewUrl}` },
-      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedPreviewUrl}&text=${encodedTitle}` },
+      // Facebook needs the rendered preview endpoint because it does not execute the SPA.
+      // og:url in that response remains the clean public article URL.
+      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(previewUrl)}` },
+      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedArticleUrl}&text=${encodedTitle}` },
     ],
-    [encodedArticleUrl, encodedTitle, encodedPreviewUrl],
+    [encodedArticleUrl, encodedTitle, previewUrl],
   );
 
   const nativeShare = async () => {

@@ -251,9 +251,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { sessionStorage.setItem(POST_AUTH_PATH_KEY, "/dashboard"); } catch { /* noop */ }
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
+      extraParams: { prompt: "select_account" },
     });
     if (result.error) {
-      return { error: "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
+      try { sessionStorage.removeItem(POST_AUTH_PATH_KEY); } catch { /* noop */ }
+      const detail = result.error instanceof Error ? result.error.message : String(result.error);
+      return { error: detail || "Google लॉगिन शुरू नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" };
     }
     return { error: null };
   };

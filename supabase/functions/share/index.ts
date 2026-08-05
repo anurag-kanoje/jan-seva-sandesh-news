@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SITE_URL = Deno.env.get("SITE_URL") || "https://jss-news-foundation.lovable.app";
 
@@ -41,7 +41,6 @@ Deno.serve(async (req) => {
 
   const target = `${SITE_URL}/${article.slug || slug}`;
   const title = cleanTitle(article?.title || "जन सेवा संदेश");
-  const desc = title.slice(0, 200);
   const img = article?.image_url || "";
 
   const html = `<!doctype html>
@@ -50,18 +49,18 @@ Deno.serve(async (req) => {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}" />
+<meta name="description" content="${esc(title)}" />
 <link rel="canonical" href="${target}" />
 <meta property="og:site_name" content="जन सेवा संदेश" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="${esc(title)}" />
-<meta property="og:description" content="${esc(desc)}" />
+<meta property="og:description" content="${esc(title)}" />
 <meta property="og:url" content="${target}" />
 ${img ? `<meta property="og:image" content="${esc(img)}" />` : ""}
 <meta property="og:locale" content="hi_IN" />
 <meta name="twitter:card" content="${img ? "summary_large_image" : "summary"}" />
 <meta name="twitter:title" content="${esc(title)}" />
-<meta name="twitter:description" content="${esc(desc)}" />
+<meta name="twitter:description" content="${esc(title)}" />
 ${img ? `<meta name="twitter:image" content="${esc(img)}" />` : ""}
 <meta http-equiv="refresh" content="0; url=${target}" />
 <script>window.location.replace(${JSON.stringify(target)});</script>
@@ -73,9 +72,10 @@ ${img ? `<meta name="twitter:image" content="${esc(img)}" />` : ""}
 
   return new Response(html, {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "text/html; charset=UTF-8",
       "Cache-Control": "public, max-age=300",
       "Access-Control-Allow-Origin": "*",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 });
