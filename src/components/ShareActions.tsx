@@ -12,7 +12,6 @@ interface ShareActionsProps {
 
 // Always share the clean, published article URL — never the backend function URL or preview origin.
 const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
-const SHARE_PREVIEW_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/share`;
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
@@ -29,19 +28,16 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
 
   const shareTitle = cleanArticleTitle(title);
   const articleUrl = slug ? `${PUBLIC_SITE}/${encodeURI(slug)}` : PUBLIC_SITE;
-  const previewUrl = slug ? `${SHARE_PREVIEW_BASE}/${encodeURIComponent(slug)}` : PUBLIC_SITE;
   const encodedArticleUrl = encodeURIComponent(articleUrl);
   const encodedTitle = encodeURIComponent(shareTitle);
 
   const links = useMemo(
     () => [
       { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%0A${encodedArticleUrl}` },
-      // Facebook needs the rendered preview endpoint because it does not execute the SPA.
-      // og:url in that response remains the clean public article URL.
-      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(previewUrl)}` },
+      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedArticleUrl}&quote=${encodedTitle}` },
       { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedArticleUrl}&text=${encodedTitle}` },
     ],
-    [encodedArticleUrl, encodedTitle, previewUrl],
+    [encodedArticleUrl, encodedTitle],
   );
 
   const nativeShare = async () => {
