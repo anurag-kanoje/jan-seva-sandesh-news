@@ -12,7 +12,6 @@ interface ShareActionsProps {
 
 // Always share the clean, published article URL — never the backend function URL or preview origin.
 const PUBLIC_SITE = "https://jss-news-foundation.lovable.app";
-const SHARE_PREVIEW_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/share`;
 
 const ShareActions = ({ title, url }: ShareActionsProps) => {
   const { toast } = useToast();
@@ -29,18 +28,16 @@ const ShareActions = ({ title, url }: ShareActionsProps) => {
 
   const shareTitle = cleanArticleTitle(title);
   const articleUrl = slug ? `${PUBLIC_SITE}/${encodeURI(slug)}` : PUBLIC_SITE;
-  const previewUrl = slug ? `${SHARE_PREVIEW_BASE}/${encodeURIComponent(slug)}` : PUBLIC_SITE;
   const encodedArticleUrl = encodeURIComponent(articleUrl);
-  const encodedPreviewUrl = encodeURIComponent(previewUrl);
   const encodedTitle = encodeURIComponent(shareTitle);
 
   const links = useMemo(
     () => [
       { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${encodedTitle}%0A${encodedArticleUrl}` },
-      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedPreviewUrl}` },
-      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedPreviewUrl}&text=${encodedTitle}` },
+      { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedArticleUrl}&quote=${encodedTitle}` },
+      { label: "X", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${encodedArticleUrl}&text=${encodedTitle}` },
     ],
-    [encodedArticleUrl, encodedTitle, encodedPreviewUrl],
+    [encodedArticleUrl, encodedTitle],
   );
 
   const nativeShare = async () => {
